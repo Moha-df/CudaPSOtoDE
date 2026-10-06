@@ -1,0 +1,115 @@
+\begin{table}[!t]\centering\scriptsize\setlength{\tabcolsep}{2pt}\caption{Sphere : EFV moyenne (10 runs ; plus petit = meilleur ; $1.2\mathrm{e}{-5}=1{,}2\times10^{-5}$).}\label{tab:sphere}
+\begin{tabular}{rr|ccc}\toprule Dim & Pop & DE CPU & DE GPU & PSO prof\\\midrule
+10 & 50 & 1.2e-5 & 1.1e-5 & 0.791\\
+10 & 100 & 1.1e-5 & 9.9e-6 & 1.12\\
+10 & 500 & 1.0e-5 & 1.1e-5 & 0.393\\
+\midrule
+50 & 50 & 1.4e-5 & 1.3e-5 & 46\\
+50 & 100 & 1.3e-5 & 1.4e-5 & 33.9\\
+50 & 500 & 0.174 & 0.208 & 37.1\\
+\midrule
+100 & 50 & 3.3e-5 & 2.5e-5 & 122\\
+100 & 100 & 3.0e-5 & 3.7e-5 & 114\\
+100 & 500 & 0.173 & 0.184 & 133\\
+\bottomrule\end{tabular}\end{table}
+\begin{table}[!t]\centering\scriptsize\setlength{\tabcolsep}{2pt}\caption{Rastrigin : EFV moyenne (10 runs ; plus petit = meilleur ; $1.2\mathrm{e}{-5}=1{,}2\times10^{-5}$).}\label{tab:rastrigin}
+\begin{tabular}{rr|ccc}\toprule Dim & Pop & DE CPU & DE GPU & PSO prof\\\midrule
+10 & 50 & 0.959 & 0.504 & 23.5\\
+10 & 100 & 18.5 & 17.5 & 27.5\\
+10 & 500 & 28.2 & 25.2 & 16.6\\
+\midrule
+50 & 50 & 30 & 33.5 & 382\\
+50 & 100 & 173 & 243 & 331\\
+50 & 500 & 420 & 421 & 325\\
+\midrule
+100 & 50 & 99.7 & 95.4 & 896\\
+100 & 100 & 125 & 128 & 864\\
+100 & 500 & 894 & 905 & 831\\
+\bottomrule\end{tabular}\end{table}
+\begin{table}[!t]\centering\scriptsize\setlength{\tabcolsep}{2pt}\caption{Rosenbrock : EFV moyenne (10 runs ; plus petit = meilleur ; $1.2\mathrm{e}{-5}=1{,}2\times10^{-5}$).}\label{tab:rosenbrock}
+\begin{tabular}{rr|ccc}\toprule Dim & Pop & DE CPU & DE GPU & PSO prof\\\midrule
+10 & 50 & 3.55 & 3.14 & 191\\
+10 & 100 & 1.1e-5 & 1.0e-5 & 311\\
+10 & 500 & 3.37 & 3.12 & 37.1\\
+\midrule
+50 & 50 & 56.5 & 46.9 & 4.5e4\\
+50 & 100 & 20.4 & 20.7 & 2.5e4\\
+50 & 500 & 175 & 164 & 2.8e4\\
+\midrule
+100 & 50 & 137 & 122 & 1.2e5\\
+100 & 100 & 99.9 & 111 & 1.6e5\\
+100 & 500 & 207 & 212 & 1.4e5\\
+\bottomrule\end{tabular}\end{table}
+\begin{table}[!t]\centering\scriptsize\setlength{\tabcolsep}{2pt}\caption{Griewank : EFV moyenne (10 runs ; plus petit = meilleur ; $1.2\mathrm{e}{-5}=1{,}2\times10^{-5}$).}\label{tab:griewank}
+\begin{tabular}{rr|ccc}\toprule Dim & Pop & DE CPU & DE GPU & PSO prof\\\midrule
+10 & 50 & 7.7e-3 & 0.0102 & 0.134\\
+10 & 100 & 2.9e-3 & 5.5e-3 & 0.173\\
+10 & 500 & 0.0324 & 0.033 & 0.0324\\
+\midrule
+50 & 50 & 6.7e-6 & 6.2e-6 & 0.839\\
+50 & 100 & 7.0e-6 & 6.6e-6 & 0.618\\
+50 & 500 & 5.5e-3 & 6.1e-3 & 0.701\\
+\midrule
+100 & 50 & 8.5e-6 & 7.5e-4 & 0.872\\
+100 & 100 & 1.2e-5 & 1.8e-5 & 0.884\\
+100 & 500 & 3.2e-3 & 3.5e-3 & 0.881\\
+\bottomrule\end{tabular}\end{table}
+\begin{table}[!t]\centering\scriptsize\setlength{\tabcolsep}{2pt}\caption{Temps moyen (s) sur les 4 fonctions (40 runs par case).}\label{tab:temps}
+\begin{tabular}{rr|ccc}\toprule Dim & Pop & DE CPU & DE GPU & PSO prof\\\midrule
+10 & 50 & 0.024 & 0.012 & 0.185\\
+10 & 100 & 0.024 & 0.006 & 0.099\\
+10 & 500 & 0.024 & 0.002 & 0.042\\
+\midrule
+50 & 50 & 0.478 & 0.389 & 4.567\\
+50 & 100 & 0.499 & 0.222 & 3.071\\
+50 & 500 & 0.502 & 0.052 & 2.092\\
+\midrule
+100 & 50 & 1.945 & 0.902 & 18.047\\
+100 & 100 & 1.996 & 0.589 & 12.201\\
+100 & 500 & 2.046 & 0.143 & 9.128\\
+\bottomrule\end{tabular}\end{table}
+\begin{table}[!t]\centering\scriptsize\setlength{\tabcolsep}{2pt}\caption{Taux de succ\`es, forme \emph{article / DE GPU $CR{=}0{,}9$ / DE GPU $CR{=}0{,}3$}. Article \cite{qin} : EFV $<10^{-8}$, 25 runs ; nos valeurs : EFV $<10^{-4}$, 10 runs.}\label{tab:sr}
+\begin{tabular}{lr|ccc}\toprule Fonction & Dim & Pop 50 & Pop 100 & Pop 500\\\midrule
+Sphere & 10 & 1.00/1.00/1.00 & 1.00/1.00/1.00 & 1.00/1.00/1.00\\
+Sphere & 50 & 1.00/1.00/1.00 & 1.00/1.00/1.00 & 1.00/0.00/1.00\\
+Sphere & 100 & 1.00/1.00/1.00 & 1.00/1.00/1.00 & 1.00/0.00/0.00\\
+Rastrigin & 10 & 1.00/0.50/1.00 & 1.00/0.00/1.00 & 1.00/0.00/0.00\\
+Rastrigin & 50 & 0.00/0.00/0.00 & 0.04/0.00/0.00 & 0.04/0.00/0.00\\
+Rastrigin & 100 & 0.00/0.00/0.00 & 0.00/0.00/0.00 & 0.00/0.00/0.00\\
+Rosenbrock & 10 & 0.44/0.00/0.00 & 0.32/1.00/0.00 & 0.00/0.00/0.00\\
+Rosenbrock & 50 & 0.00/0.00/0.00 & 0.04/0.00/0.00 & 0.00/0.00/0.00\\
+Rosenbrock & 100 & 0.00/0.00/0.00 & 0.00/0.00/0.00 & 0.00/0.00/0.00\\
+Griewank & 10 & 1.00/0.20/0.90 & 1.00/0.80/1.00 & 1.00/0.00/0.00\\
+Griewank & 50 & 0.92/1.00/1.00 & 1.00/1.00/1.00 & 1.00/0.00/1.00\\
+Griewank & 100 & 0.84/0.90/1.00 & 0.96/1.00/1.00 & 0.96/0.00/1.00\\
+\bottomrule\end{tabular}\end{table}
+\begin{table}[!t]\centering\scriptsize\setlength{\tabcolsep}{2pt}\caption{DE GPU : EFV moyenne, forme \emph{$CR{=}0{,}9$ / $CR{=}0{,}3$} (10 runs).}\label{tab:cr}
+\begin{tabular}{lr|ccc}\toprule Fonction & Dim & Pop 50 & Pop 100 & Pop 500\\\midrule
+Sphere & 10 & 1.1e-5/1.2e-5 & 9.9e-6/1.1e-5 & 1.1e-5/1.2e-5\\
+Sphere & 50 & 1.3e-5/3.9e-5 & 1.4e-5/4.2e-5 & 0.208/4.3e-5\\
+Sphere & 100 & 2.5e-5/4.4e-5 & 3.7e-5/4.8e-5 & 0.184/5.0e-4\\
+Rastrigin & 10 & 0.504/1.1e-5 & 17.5/1.1e-5 & 25.2/5.73\\
+Rastrigin & 50 & 33.5/146 & 243/173 & 421/238\\
+Rastrigin & 100 & 95.4/554 & 128/599 & 905/719\\
+Rosenbrock & 10 & 3.14/2.65 & 1.0e-5/4.33 & 3.12/7.23\\
+Rosenbrock & 50 & 46.9/38.1 & 20.7/40.3 & 164/47.2\\
+Rosenbrock & 100 & 122/84.4 & 111/88.3 & 212/336\\
+Griewank & 10 & 0.0102/7.5e-4 & 5.5e-3/6.2e-6 & 0.033/5.5e-4\\
+Griewank & 50 & 6.2e-6/2.0e-5 & 6.6e-6/2.0e-5 & 6.1e-3/2.1e-5\\
+Griewank & 100 & 7.5e-4/2.1e-5 & 1.8e-5/2.3e-5 & 3.5e-3/4.7e-5\\
+\bottomrule\end{tabular}\end{table}
+\begin{table}[!t]\centering\scriptsize\setlength{\tabcolsep}{2pt}\caption{Acc\'el\'eration $T_{\mathrm{CPU}}/T_{\mathrm{GPU}}$ du DE ($CR{=}0{,}9$).}\label{tab:speedup}
+\begin{tabular}{lr|ccc}\toprule Fonction & Dim & Pop 50 & Pop 100 & Pop 500\\\midrule
+Sphere & 10 & 1.9 & 3.5 & 12.0\\
+Sphere & 50 & 0.8 & 1.4 & 6.1\\
+Sphere & 100 & 2.0 & 2.8 & 11.9\\
+Rastrigin & 10 & 1.5 & 4.5 & 12.9\\
+Rastrigin & 50 & 1.7 & 3.0 & 13.7\\
+Rastrigin & 100 & 2.0 & 3.2 & 13.2\\
+Rosenbrock & 10 & 1.1 & 1.9 & 8.0\\
+Rosenbrock & 50 & 0.5 & 0.9 & 3.7\\
+Rosenbrock & 100 & 1.0 & 1.7 & 7.5\\
+Griewank & 10 & 3.6 & 6.4 & 27.0\\
+Griewank & 50 & 3.4 & 5.4 & 22.1\\
+Griewank & 100 & 3.7 & 5.8 & 24.4\\
+\bottomrule\end{tabular}\end{table}

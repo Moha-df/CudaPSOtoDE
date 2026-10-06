@@ -1,0 +1,120 @@
+\documentclass[conference]{IEEEtran}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,shapes.multipart,fit,calc}
+\usepackage[hidelinks]{hyperref}
+
+
+
+\begin{document}
+
+\title{Algorithme d'\'Evolution Diff\'erentielle massivement parall\`ele sur GPU avec CUDA : comparaison avec la version s\'equentielle}
+
+\author{
+  \IEEEauthorblockN{Zainab Elamri, Omar Elsemry, Mohamed De Franceschi}
+  \IEEEauthorblockA{Master IM -- Universit\'e de Haute-Alsace (UHA)\\
+  Enseignant : Lhassane IDOUMGHAR}
+}
+
+\maketitle
+
+\begin{abstract}
+\textit{[\`A compl\'eter]}
+\end{abstract}
+
+\begin{IEEEkeywords}
+Differential Evolution, GPU, CUDA, massively parallel metaheuristics, global optimization, benchmark functions.
+\end{IEEEkeywords}
+
+\section{Introduction}
+\textit{[\`A compl\'eter]}
+
+\section{Programmation GPU}
+\textit{[\`A compl\'eter]}
+
+\section{\'Evolution Diff\'erentielle}
+\subsection{Aper\c cu de la version s\'equentielle}
+\textit{[\`A compl\'eter]}
+
+\subsection{Description de la version massivement parall\`ele}
+\textit{[\`A compl\'eter]}
+
+% ---------- Organigramme (style de l'article) ----------
+\begin{figure}[!t]
+\centering
+\begin{tikzpicture}[font=\fontsize{6}{7}\selectfont,>={Stealth[length=1.5mm]},x=1cm,y=1cm,
+  hb/.style={draw,rounded corners=4pt,align=center,minimum width=2.1cm,minimum height=0.55cm,inner sep=1pt},
+  kb/.style={draw,align=center,minimum width=3.1cm,minimum height=0.6cm,inner sep=1pt},
+  rw/.style={font=\fontsize{5}{6}\selectfont\bfseries}]
+  % en-t\^etes
+  \node[font=\fontsize{6}{7}\selectfont\bfseries,align=center] at (1.2,0.35) {CPU (h\^ote)\\1 thread};
+  \node[font=\fontsize{6}{7}\selectfont\bfseries,align=center] at (4.9,0.35) {GPU (device)\\\textit{gridDim $\times$ blockDim threads}};
+  \draw[dashed,gray] (2.75,0.8) -- (2.75,-7.4);
+  % barre m\'emoire globale
+  \node[draw,fill=gray!25,minimum width=0.4cm,minimum height=6.2cm,inner sep=0] (gm) at (7.9,-3.4) {};
+  \node[rotate=-90,font=\fontsize{6}{7}\selectfont\bfseries] at (7.9,-3.4) {M\'emoire globale};
+  % h\^ote
+  \node[hb] (init) at (1.2,-0.7) {Allocation m\'emoire\\Copie H$\to$D};
+  \node[draw,diamond,aspect=2.4,inner sep=0pt,align=center] (dec) at (1.2,-4.3) {g\'en\'eration\\$<$ maxGen ?};
+  \node[hb] (ret) at (1.2,-6.6) {Retourner le\\meilleur individu};
+  % noyaux
+  \node[kb] (ki) at (4.9,-1.4) {\textbf{kernel (I)}\\[-1pt]\textcolor{gray}{kernelInitRandom}};
+  \node[kb] (ke) at (4.9,-2.9) {\textbf{kernel (E)}\\[-1pt]\textcolor{gray}{kernelEvaluate}};
+  \node[kb,minimum height=1.5cm] (kg) at (4.9,-4.9) {\textbf{kernel (G)}\\[-1pt]\textcolor{gray}{kernelDEGeneration :}\\[-1pt]\textcolor{gray}{mutation, croisement,}\\[-1pt]\textcolor{gray}{\'evaluation, s\'election}};
+  % fl\`eches h\^ote -> noyaux
+  \draw[->] (init.south) -- ++(0,-0.35) -| node[pos=0.25,above,rw]{kernel call} (ki.west);
+  \draw[->] (init.south)++(0,-0.35) -- ++(0,0) ;
+  \draw[->] (1.2,-1.05) |- node[pos=0.8,above,rw]{kernel call} (ke.west);
+  \draw[->] (1.2,-2.9) -- (dec.north);
+  \draw[->] (dec.east) -- node[above,rw]{oui} node[below,rw]{kernel call} (kg.west |- dec.east);
+  \draw[->] (dec.south) -- node[right,rw]{non} (ret.north);
+  % boucle de retour
+  \draw[->] (kg.south) -- ++(0,-0.35) -| (2.45,-3.55) -- (1.2,-3.55);
+  % lectures / \'ecritures m\'emoire
+  \foreach \k/\yy in {ki/-1.4,ke/-2.9,kg/-4.9}{
+    \draw[<-] ($(\k.east)+(0,0.12)$) -- node[above,rw]{read} ($(gm.west |- \k.east)+(0,0.12)$);
+    \draw[->] ($(\k.east)+(0,-0.12)$) -- node[below,rw]{write} ($(gm.west |- \k.east)+(0,-0.12)$);
+  }
+\end{tikzpicture}
+\caption{Organigramme du DE massivement parall\`ele (un thread par individu).}
+\label{fig:sequence}
+\end{figure}
+
+\section{R\'esultats exp\'erimentaux}
+\subsection{Configuration}
+\textit{[\`A compl\'eter]}
+
+\subsection{Fonctions de test}
+\textit{[\`A compl\'eter]}
+
+\subsection{R\'esultats}
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\columnwidth]{figures/temps_d10.pdf}
+\caption{Temps d'ex\'ecution moyen (\'echelle logarithmique) en fonction de la population, $D=10$ (barres : \'ecart-type sur 10 runs).}
+\label{fig:temps10}
+\end{figure}
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\columnwidth]{figures/temps_d100.pdf}
+\caption{Temps d'ex\'ecution moyen en fonction de la population, $D=100$.}
+\label{fig:temps}
+\end{figure}
+
+\input{resultats_tables_squelette}
+
+\section{Conclusion}
+\textit{[\`A compl\'eter]}
+
+\nocite{*}
+\begin{thebibliography}{1}
+\bibitem{qin} A.~K. Qin, F.~Raimondo, F.~Forbes, and Y.~S. Ong, ``An improved CUDA-based implementation of differential evolution on GPU,'' in \emph{Proc. GECCO'12}, Philadelphia, USA, 2012.
+\end{thebibliography}
+
+\end{document}

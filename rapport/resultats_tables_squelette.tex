@@ -1,0 +1,30 @@
+\begin{table}[!t]\centering\scriptsize\setlength{\tabcolsep}{2pt}\caption{Temps moyen (s) sur les 4 fonctions (40 runs par case).}\label{tab:temps}
+\begin{tabular}{rr|ccc}\toprule Dim & Pop & DE CPU & DE GPU & PSO prof\\\midrule
+10 & 50 & 0.024 & 0.012 & 0.185\\
+10 & 100 & 0.024 & 0.006 & 0.099\\
+10 & 500 & 0.024 & 0.002 & 0.042\\
+\midrule
+50 & 50 & 0.478 & 0.389 & 4.567\\
+50 & 100 & 0.499 & 0.222 & 3.071\\
+50 & 500 & 0.502 & 0.052 & 2.092\\
+\midrule
+100 & 50 & 1.945 & 0.902 & 18.047\\
+100 & 100 & 1.996 & 0.589 & 12.201\\
+100 & 500 & 2.046 & 0.143 & 9.128\\
+\bottomrule\end{tabular}\end{table}
+
+\begin{table}[!t]\centering\scriptsize\setlength{\tabcolsep}{2pt}\caption{Taux de succ\`es, forme \emph{article / DE GPU $CR{=}0{,}9$ / DE GPU $CR{=}0{,}3$}. Article \cite{qin} : EFV $<10^{-8}$, 25 runs ; nos valeurs : EFV $<10^{-4}$, 10 runs.}\label{tab:sr}
+\begin{tabular}{lr|ccc}\toprule Fonction & Dim & Pop 50 & Pop 100 & Pop 500\\\midrule
+Sphere & 10 & 1.00/1.00/1.00 & 1.00/1.00/1.00 & 1.00/1.00/1.00\\
+Sphere & 50 & 1.00/1.00/1.00 & 1.00/1.00/1.00 & 1.00/0.00/1.00\\
+Sphere & 100 & 1.00/1.00/1.00 & 1.00/1.00/1.00 & 1.00/0.00/0.00\\
+Rastrigin & 10 & 1.00/0.50/1.00 & 1.00/0.00/1.00 & 1.00/0.00/0.00\\
+Rastrigin & 50 & 0.00/0.00/0.00 & 0.04/0.00/0.00 & 0.04/0.00/0.00\\
+Rastrigin & 100 & 0.00/0.00/0.00 & 0.00/0.00/0.00 & 0.00/0.00/0.00\\
+Rosenbrock & 10 & 0.44/0.00/0.00 & 0.32/1.00/0.00 & 0.00/0.00/0.00\\
+Rosenbrock & 50 & 0.00/0.00/0.00 & 0.04/0.00/0.00 & 0.00/0.00/0.00\\
+Rosenbrock & 100 & 0.00/0.00/0.00 & 0.00/0.00/0.00 & 0.00/0.00/0.00\\
+Griewank & 10 & 1.00/0.20/0.90 & 1.00/0.80/1.00 & 1.00/0.00/0.00\\
+Griewank & 50 & 0.92/1.00/1.00 & 1.00/1.00/1.00 & 1.00/0.00/1.00\\
+Griewank & 100 & 0.84/0.90/1.00 & 0.96/1.00/1.00 & 0.96/0.00/1.00\\
+\bottomrule\end{tabular}\end{table}
