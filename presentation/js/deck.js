@@ -854,6 +854,16 @@ ANIM.limites = {
   },
 };
 
+/* ---------- qui a fait quoi : les etapes apparaissent dans l'ordre ---------- */
+ANIM.equipe = {
+  init(s) { this.bars = [...s.querySelectorAll(".eq-bar")]; },
+  enter(s, inst) {
+    if (inst) { set(this.bars, { opacity: 1, scale: 1 }); return; }
+    gsap.fromTo(this.bars, { opacity: 0, scale: 0.85 }, { opacity: 1, scale: 1, duration: 0.4, stagger: 0.18, delay: 0.3, ease: "back.out(1.6)" });
+  },
+  go() {},
+};
+
 /* ---------- moteur : etapes et entree/sortie de slide ---------- */
 const inited = new Set();
 function stepOf(slide) { return slide.querySelectorAll(".fragment.step.visible").length; }

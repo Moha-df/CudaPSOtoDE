@@ -102,6 +102,12 @@ svg .mono { font-family: var(--code); }
 .etat svg { width: 22px; height: 22px; }
 .etat + .small { display: block; margin-top: 4px; }
 
+/* qui a fait quoi : une ligne par personne, une colonne par etape */
+.equipe { display: grid; grid-template-columns: 120px repeat(7, minmax(0, 1fr)); grid-template-rows: repeat(3, 112px); gap: 10px; }
+.eq-nom { grid-column: 1; align-self: center; font-weight: 700; font-size: 26px; }
+.eq-bar { border-radius: 8px; display: flex; align-items: center; justify-content: center; text-align: center;
+  padding: 8px; font-weight: 700; font-size: 21px; line-height: 1.2; color: var(--ink); box-sizing: border-box; }
+
 /* boutons de dimension sur le graphique des temps */
 .dimbtns { display: flex; gap: 10px; margin-bottom: 10px; }
 .dimbtns button {

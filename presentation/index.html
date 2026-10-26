@@ -77,7 +77,7 @@
   </div>
   <div class="who">Mohamed</div>
   <aside class="notes">
-<p>Mohamed. Durée : 1 min 05.</p>
+<p>Mohamed. Durée : 55 s.</p>
 <p>Un CPU a peu de cœurs mais rapides. Un GPU en a des milliers, plus simples, qui font le même calcul sur beaucoup de données.</p>
 <p><b>[clic]</b> On lance un kernel avec le nombre de blocs et de threads par bloc. Chaque thread calcule son numéro avec cette formule et s'en sert pour savoir sur quelle case travailler.</p>
 <p><b>[clic]</b> La mémoire globale est visible par tout le monde mais lente.</p>
@@ -232,11 +232,10 @@
   </div>
   <div class="who">Mohamed</div>
   <aside class="notes">
-<p>Mohamed. Durée : 55 s.</p>
+<p>Mohamed. Durée : 45 s.</p>
 <p>Séparer les kernels a un coût : en médiane la v2 est 1,4 fois plus lente que la v1. On a mesuré le temps de chaque kernel avec des cudaEvent.</p>
 <p><b>[clic]</b> Pour D = 10 et Pop 50, chaque kernel prend 3 à 5 microsecondes quel que soit son travail : c'est le coût du lancement. Et on lance 5 kernels par génération au lieu d'un, sur 2000 générations.</p>
 <p><b>[clic]</b> Pour D = 100, M, C et E deviennent longs, jusqu'à 37 µs pour E : chaque thread fait une boucle de 100 tours et relit en mémoire globale ce que le kernel d'avant a écrit. En plus, deux threads voisins lisent des cases éloignées de D cases, donc le GPU ne peut pas grouper les lectures. Zainab va montrer comment la v3 règle ça.</p>
-<p>Remarque : la mesure ajoute une attente après chaque kernel, donc ces temps servent à comparer les kernels entre eux.</p>
 <p><b>Questions possibles</b> : comment vous avez mesuré ? Option -DPROFIL : cudaEventRecord avant et après chaque kernel. Pour D = 50 v1 et v2 ont presque le même temps, on n'a pas creusé pourquoi.</p>
   </aside>
 </section>
@@ -449,6 +448,29 @@
 <p><b>[clic]</b> Si l'essai a une somme de 0,00001 et la cible 0,00002, les deux donnent -450 tout pile : la sélection ne voit plus la différence. C'est pour ça que l'erreur bloque vers 10^-5 et qu'on n'atteint jamais 10^-8 comme l'article.</p>
 <p><b>[clic]</b> On n'est pas passés en double : sur une carte grand public comme la 2080 Ti, le double est environ 32 fois plus lent, ça aurait cassé les mesures de temps. La vraie solution serait de calculer f sans la constante et de l'ajouter seulement à l'affichage.</p>
 <p><b>[clic]</b> Et on a gardé le PSO fourni tel quel, à part la correction de Griewank, et on n'a testé qu'une autre valeur de CR.</p>
+  </aside>
+</section>
+
+<!-- ============================================================ 16b -->
+<section data-anim="equipe">
+  <h2 style="max-width:none">Qui a fait quoi</h2>
+  <div class="equipe">
+    <div class="eq-nom" style="grid-row:1">Zainab</div>
+    <div class="eq-nom" style="grid-row:2">Omar</div>
+    <div class="eq-nom" style="grid-row:3">Mohamed</div>
+    <div class="eq-bar" data-col="0" style="grid-column:2;grid-row:1/4;background:var(--pso);color:var(--paper)">Étude du code CUDA PSO</div>
+    <div class="eq-bar" data-col="1" style="grid-column:3;grid-row:3;background:var(--cpu)">DE séquentiel</div>
+    <div class="eq-bar" data-col="2" style="grid-column:4;grid-row:2;background:var(--v1);color:var(--paper)">GPU v1</div>
+    <div class="eq-bar" data-col="3" style="grid-column:5;grid-row:2;background:var(--v2)">GPU v2</div>
+    <div class="eq-bar" data-col="4" style="grid-column:6;grid-row:1;background:var(--v3)">GPU v3</div>
+    <div class="eq-bar" data-col="5" style="grid-column:7;grid-row:3;background:var(--ink);color:var(--paper)">Tests et graphiques</div>
+    <div class="eq-bar" data-col="6" style="grid-column:8;grid-row:1/4;background:var(--paper-2);border:2px solid var(--ink)">Rapport</div>
+  </div>
+  <p class="small" style="margin-top:22px">De gauche à droite : l'ordre dans lequel le projet a avancé.</p>
+  <div class="who">Mohamed</div>
+  <aside class="notes">
+<p>Mohamed. Durée : 20 s.</p>
+<p>Pour le partage du travail : on a d'abord tous étudié le code CUDA du PSO. Ensuite j'ai fait le DE séquentiel, Omar a fait la version GPU v1 puis la v2, et Zainab la variante v3, avec un thread par coordonnée. J'ai fait les tests et les graphiques, et on a rédigé le rapport tous ensemble.</p>
   </aside>
 </section>
 
