@@ -8,212 +8,193 @@
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,positioning,shapes.geometric,shapes.multipart,fit,calc}
 \usepackage[hidelinks]{hyperref}
-
-
+\usepackage{etoolbox}
+% pas de tiret long : puces normales dans les listes, et ":" apres Resume / Mots-cles
+\frenchsetup{StandardItemLabels=true}
+\def\retiretiret#1{\patchcmd{#1}{---}{~:~}{\retiretiret{#1}}{}}
+\retiretiret{\abstract}\retiretiret{\IEEEkeywords}
+\renewcommand{\IEEEkeywordsname}{Mots-cl\'es}
 
 \begin{document}
 
-\title{Algorithme d'\'Evolution Diff\'erentielle massivement parall\`ele sur GPU avec CUDA : comparaison avec la version s\'equentielle}
+\title{\'Evolution Diff\'erentielle massivement parall\`ele sur GPU avec CUDA : trois versions compar\'ees \`a la version s\'equentielle}
 
 \author{
   \IEEEauthorblockN{Zainab Elamri, Omar Elsemry, Mohamed De Franceschi}
-  \IEEEauthorblockA{Master IM -- Universit\'e de Haute-Alsace (UHA)\\
+  \IEEEauthorblockA{Master IM, Universit\'e de Haute-Alsace (UHA)\\
   Enseignant : Lhassane IDOUMGHAR}
 }
 
 \maketitle
 
 \begin{abstract}
-Nous \'etudions la parall\'elisation massive sur GPU de l'\'Evolution Diff\'erentielle (DE/rand/1/bin) \`a partir d'un code CUDA de PSO fourni par l'enseignant. Nous en d\'erivons une version s\'equentielle (CPU) et une version GPU o\`u chaque thread traite un individu, puis nous les comparons au PSO d'origine sur quatre fonctions de test (Sphere, Rastrigin, Rosenbrock, Griewank d\'ecal\'ees), pour $\mathrm{Dim}\in\{10,50,100\}$, $\mathrm{Pop}\in\{50,100,500\}$ et un budget de $10^4\times\mathrm{Dim}$ \'evaluations. Sur une NVIDIA RTX 2080 Ti, le DE GPU est jusqu'\`a 27 fois plus rapide que le DE s\'equentiel (m\'ediane 3,5), pour une qualit\'e statistiquement \'equivalente dans 34 configurations sur 36, et il surpasse significativement le PSO de r\'ef\'erence dans 34 configurations sur 36. Nous comparons aussi les taux de succ\`es \`a ceux publi\'es pour cudaDEi \cite{qin}, en testant le param\`etre $CR=0{,}3$ de cet article, qui am\'eliore les grandes populations mais d\'et\'eriore Rosenbrock, et nous discutons les limites li\'ees \`a la simple pr\'ecision.
+Nous partons d'un PSO \'ecrit en CUDA par notre professeur et nous le transformons en \'evolution diff\'erentielle (DE/rand/1/bin). Nous avons \'ecrit une version s\'equentielle sur CPU et trois versions sur GPU : v1 avec un seul kernel et un thread par individu, v2 avec un kernel par \'etape (mutation, croisement, \'evaluation, s\'election) et v3 avec un thread par coordonn\'ee. Nous les testons sur Sphere, Rastrigin, Rosenbrock et Griewank d\'ecal\'ees, avec $D\in\{10,50,100\}$, une population de 50, 100 ou 500 et un budget de $10^4\times D$ \'evaluations. Sur une RTX 2080 Ti, les quatre versions donnent la m\^eme qualit\'e (test de Wilcoxon) et battent nettement le PSO fourni. La v2 donne exactement les m\^emes r\'esultats que la v1 mais elle est en g\'en\'eral plus lente. La v3 va jusqu'\`a 89 fois plus vite que le CPU, mais elle est plus lente que la v1 pour $D=10$. Nous comparons aussi nos taux de succ\`es \`a ceux de l'article de Qin et al. et nous testons $CR=0{,}3$.
 \end{abstract}
 
 \begin{IEEEkeywords}
-Differential Evolution, GPU, CUDA, massively parallel metaheuristics, global optimization, benchmark functions.
+\'Evolution diff\'erentielle, GPU, CUDA, parall\'elisme, optimisation globale, fonctions de test.
 \end{IEEEkeywords}
 
 %--------------------------------------------------------------
 \section{Introduction}
-Beaucoup de probl\`emes d'ing\'enierie se ram\`enent \`a la recherche d'un minimum global $x^\star=\arg\min_{x\in[x_{\min},x_{\max}]^D} f(x)$ d'une fonction non convexe, pour laquelle les m\'ethodes \`a gradient sont inop\'erantes. Les m\'etaheuristiques de population, comme l'optimisation par essaims particulaires (PSO) et l'\'evolution diff\'erentielle (DE) \cite{storn}, sont des alternatives courantes, mais leur co\^ut croît avec la dimension et la taille de la population.
+On cherche le minimum global d'une fonction $f$ sur un domaine born\'e, ici $[-5{,}12;\,5{,}12]^D$, o\`u $D$ est le nombre de dimensions. Les fonctions qu'on teste ont beaucoup de minimums locaux (Rastrigin, Griewank) ou une vall\'ee \'etroite (Rosenbrock), donc une m\'ethode de descente classique reste vite bloqu\'ee. On utilise plut\^ot des m\'etaheuristiques \`a population : on fait \'evoluer un groupe de solutions et on garde les meilleures. L'optimisation par essaim de particules (PSO) et l'\'evolution diff\'erentielle (DE) \cite{storn} en font partie.
 
-Ces algorithmes sont naturellement parall\`eles : les individus subissent les m\^emes op\'erations, et les GPU, qui ex\'ecutent des milliers de threads, s'y pr\^etent bien \cite{qin}. L'objectif de ce travail de Master est d'\'etudier une version massivement parall\`ele du PSO fournie en CUDA, de la transformer en DE, et de comparer le r\'esultat \`a une version s\'equentielle et \`a la litt\'erature.
+Ces m\'ethodes co\^utent cher quand $D$ et la taille de la population augmentent. Par contre, chaque individu subit les m\^emes calculs, ce qui convient bien \`a un GPU, capable de faire tourner des milliers de threads en m\^eme temps \cite{qin}.
 
-Nos contributions sont : (i) une impl\'ementation s\'equentielle et une impl\'ementation GPU (un thread par individu) de DE/rand/1/bin, (ii) un protocole exp\'erimental reproductible (10 runs, 3 dimensions, 3 tailles de population, 4 fonctions), (iii) une comparaison avec le PSO de r\'ef\'erence et, pour la qualit\'e, avec cudaDEi \cite{qin}. La section~II rappelle la programmation GPU, la section~III d\'ecrit le DE et nos impl\'ementations, la section~IV pr\'esente les r\'esultats et la section~V conclut.
+Le professeur nous a donn\'e un PSO \'ecrit en CUDA. Nous l'avons d'abord \'etudi\'e, puis nous l'avons transform\'e en DE (variante DE/rand/1/bin). Nous avons \'ecrit une version s\'equentielle sur CPU, qui sert de r\'ef\'erence, et trois versions GPU :
+\begin{itemize}
+\item v1 : un seul kernel fait toute une g\'en\'eration, avec un thread par individu ;
+\item v2 : un kernel par \'etape (mutation, croisement, \'evaluation, s\'election), toujours avec un thread par individu ;
+\item v3 : un kernel par \'etape, mais avec un thread par coordonn\'ee d'individu.
+\end{itemize}
+Nous comparons ces versions entre elles, avec le PSO fourni et avec les r\'esultats de l'article de Qin et al. \cite{qin}. La section~II explique les bases de la programmation GPU, la section~III d\'ecrit le DE et nos impl\'ementations, la section~IV donne les r\'esultats et la section~V conclut.
 
 %--------------------------------------------------------------
 \section{Programmation GPU}
-CUDA est la plateforme de calcul parall\`ele de NVIDIA. Le programme est h\'et\'erog\`ene : le code \emph{h\^ote} (CPU) alloue la m\'emoire, copie les donn\'ees et lance des \emph{noyaux} (\texttt{\_\_global\_\_}) qui s'ex\'ecutent sur le \emph{device} (GPU). Un lancement \texttt{kernel<<<blocs, threads>>>} cr\'ee une grille de blocs de threads ; les threads d'un bloc sont ex\'ecut\'es par groupes de 32 (\emph{warps}) sur un multiprocesseur (SM) selon le mod\`ele SIMT. Les fonctions \texttt{\_\_device\_\_} ne sont appelables que depuis le GPU.
+Un CPU a peu de c\oe urs, mais chacun est rapide et sait g\'erer du code compliqu\'e. Un GPU a des milliers de petits c\oe urs plus simples, faits pour appliquer le m\^eme calcul \`a beaucoup de donn\'ees \`a la fois. CUDA est l'outil de NVIDIA pour programmer ces GPU en C/C++.
 
-La m\'emoire est hi\'erarchis\'ee : registres et m\'emoire locale par thread, m\'emoire partag\'ee par bloc (rapide), m\'emoire globale accessible \`a tous mais de latence \'elev\'ee. Les transferts h\^ote$\leftrightarrow$device passent par le bus PCIe et sont co\^uteux : une bonne impl\'ementation les minimise. Pour le g\'en\'erateur al\'eatoire, la biblioth\`eque cuRAND fournit un \'etat (\texttt{curandState}) par thread.
+Un programme CUDA a deux parties. Le code \emph{h\^ote} tourne sur le CPU : il r\'eserve la m\'emoire du GPU (\texttt{cudaMalloc}), copie les donn\'ees (\texttt{cudaMemcpy}) et lance des \emph{kernels}. Un kernel est une fonction marqu\'ee \texttt{\_\_global\_\_} qui s'ex\'ecute sur le GPU. On la lance avec \texttt{kernel<<<blocs, threads>>>(...)} : le GPU cr\'ee alors une grille de blocs, et chaque bloc contient des threads. Chaque thread calcule son num\'ero avec \texttt{blockIdx.x * blockDim.x + threadIdx.x} et s'en sert pour savoir sur quelle donn\'ee travailler. Les threads sont ex\'ecut\'es par paquets de 32 appel\'es \emph{warps}. Les fonctions \texttt{\_\_device\_\_} ne peuvent \^etre appel\'ees que depuis le GPU.
 
-Nos mesures ont \'et\'e faites sur une NVIDIA GeForce RTX 2080 Ti (architecture Turing, capacit\'e de calcul 7.5, 11~Go) avec CUDA~13.4, compil\'e pour \texttt{sm\_75}.
+Il y a plusieurs types de m\'emoire. Les registres sont propres \`a chaque thread. La m\'emoire partag\'ee (\texttt{\_\_shared\_\_}) est rapide mais n'est visible que par les threads d'un m\^eme bloc ; \texttt{\_\_syncthreads()} fait attendre tous les threads du bloc. La m\'emoire globale est visible par tous les threads, mais elle est plus lente. Enfin, les copies entre le CPU et le GPU passent par le bus PCIe et sont lentes, donc il faut en faire le moins possible.
+
+Deux points nous ont servi pour la suite. D'abord, lancer un kernel n'est pas gratuit : cela prend quelques microsecondes, m\^eme si le kernel ne fait presque rien. Ensuite, deux kernels lanc\'es l'un apr\`es l'autre par le CPU s'ex\'ecutent dans l'ordre : le second ne d\'emarre que quand le premier a fini pour tous les threads. C'est le seul moyen simple de synchroniser tous les threads du GPU. Pour les nombres al\'eatoires, on utilise la biblioth\`eque cuRAND, avec un \'etat de g\'en\'erateur (\texttt{curandState}) par thread.
+
+Nos tests ont tourn\'e sur une NVIDIA GeForce RTX 2080 Ti (architecture Turing, 68 multiprocesseurs, 11~Go) avec CUDA~13.4.
 
 %--------------------------------------------------------------
 \section{\'Evolution Diff\'erentielle}
 
-\subsection{Aper\c cu de la version s\'equentielle}
-La DE \cite{storn} fait \'evoluer une population de $N_P$ vecteurs $x_i\in\mathbb{R}^D$ tir\'es uniform\'ement dans $[-5{,}12;\,5{,}12]^D$. \`A chaque g\'en\'eration, pour chaque individu $x_i$ (le \emph{vecteur cible}) :
+\subsection{Version s\'equentielle}
+Le DE \cite{storn} fait \'evoluer une population de $N_P$ individus. Chaque individu est un vecteur $x_i$ de $D$ coordonn\'ees, tir\'e au hasard au d\'epart. \`A chaque g\'en\'eration, on fait trois \'etapes pour chaque individu $x_i$ :
 \begin{enumerate}
-\item \textbf{Mutation} : on tire trois indices distincts $r_1,r_2,r_3\neq i$ et on forme $v_i=x_{r_1}+F\,(x_{r_2}-x_{r_3})$.
-\item \textbf{Croisement binomial} : $u_{i,j}=v_{i,j}$ si $\mathrm{rand}_j<CR$ ou $j=j_{\mathrm{rand}}$, sinon $u_{i,j}=x_{i,j}$ ; $j_{\mathrm{rand}}$ garantit qu'au moins une composante vient du mutant. Le r\'esultat est ramen\'e dans les bornes.
-\item \textbf{S\'election} : $x_i\leftarrow u_i$ si $f(u_i)\le f(x_i)$, sinon $x_i$ est conserv\'e.
+\item Mutation : on tire trois autres individus $r_1$, $r_2$, $r_3$, diff\'erents entre eux et diff\'erents de $i$, et on calcule le mutant $v_i=x_{r_1}+F\,(x_{r_2}-x_{r_3})$.
+\item Croisement : on construit l'essai $u_i$ coordonn\'ee par coordonn\'ee. On prend $v_{i,j}$ si un nombre tir\'e au hasard est inf\'erieur \`a $CR$, ou si $j=j_{\mathrm{rand}}$, sinon on garde $x_{i,j}$. L'indice $j_{\mathrm{rand}}$ est tir\'e une fois par individu, pour \^etre s\^ur qu'au moins une coordonn\'ee vienne du mutant. On ram\`ene ensuite $u_i$ dans le domaine.
+\item S\'election : si $f(u_i)\le f(x_i)$, l'essai remplace $x_i$, sinon on garde $x_i$.
 \end{enumerate}
-Nous utilisons $F=0{,}5$ et, selon la s\'erie d'exp\'eriences, $CR=0{,}9$ ou $CR=0{,}3$ (valeur de l'article \cite{qin}). Les lectures se font dans la population de la g\'en\'eration $g$ et les \'ecritures dans celle de $g{+}1$ (double buffer), ce qui rend les individus ind\'ependants au sein d'une g\'en\'eration. Le nombre de g\'en\'erations est $G=10^4\times D/N_P$, de sorte que le budget soit de $10^4\times D$ \'evaluations. La version s\'equentielle parcourt les individus dans une boucle et sert de r\'ef\'erence.
+On prend $F=0{,}5$ et $CR=0{,}9$. Nous avons aussi test\'e $CR=0{,}3$, la valeur de l'article \cite{qin}. Le sujet impose un budget de $10^4\times D$ \'evaluations de $f$. Une g\'en\'eration co\^ute $N_P$ \'evaluations, donc on fait $10^4\times D/N_P$ g\'en\'erations : par exemple 2000 g\'en\'erations pour $D=10$ et $N_P=50$, mais seulement 200 pour $N_P=500$.
 
-\subsection{Description de la version massivement parall\`ele}
-Le code de PSO fourni utilise un thread par composante de particule et recopie les meilleurs personnels vers le CPU \`a chaque it\'eration pour mettre \`a jour le meilleur global. Pour le DE, nous avons choisi un thread par \emph{individu}, car toutes les \'etapes (mutation, croisement, \'evaluation, s\'election) ne d\'ependent que de la g\'en\'eration pr\'ec\'edente. La population reste sur le GPU pendant toute l'ex\'ecution : un seul transfert aller et un seul retour. La signature \texttt{cuda\_pso} est conserv\'ee pour ne pas modifier \texttt{main.cpp}. Trois noyaux sont utilis\'es :
+Les mutants de la g\'en\'eration $g$ doivent \^etre construits \`a partir de la population de la g\'en\'eration $g$. On lit donc dans un tableau et on \'ecrit dans un autre, puis on \'echange les deux pointeurs (double buffer). La version CPU fait la m\^eme chose, avec une simple boucle sur les individus.
+
+\subsection{Version massivement parall\`ele}
+
+\subsubsection{Le PSO fourni par le professeur}
+Avant d'\'ecrire le DE, nous avons lu le PSO CUDA du professeur. \texttt{main.cpp} tire les positions au hasard sur le CPU et appelle \texttt{cuda\_pso}. Cette fonction copie les tableaux sur le GPU, puis r\'ep\`ete \texttt{MAX\_ITER} fois :
 \begin{itemize}
-\item \texttt{kernelInitRandom} : initialise un \texttt{curandState} par thread (graine d\'eriv\'ee du \texttt{rand()} de l'h\^ote) ;
-\item \texttt{kernelEvaluate} : \'evalue la population initiale ;
-\item \texttt{kernelDEGeneration} : pour l'individu $i=\mathrm{blockIdx.x}\cdot\mathrm{blockDim.x}+\mathrm{threadIdx.x}$, tire $r_1,r_2,r_3$, construit l'essai, l'\'evalue et applique la s\'election en \'ecrivant dans le buffer de sortie.
+\item \texttt{kernelUpdateParticle} : un thread par \emph{coordonn\'ee} ($N_P\times D$ threads). Le thread $i$ met \`a jour la vitesse puis la position de la case $i$ du tableau ; il retrouve la coordonn\'ee du meilleur global avec \texttt{gBest[i \% D]}. Les deux nombres al\'eatoires $r_1$ et $r_2$ sont tir\'es sur le CPU et pass\'es en param\`etre, donc ils sont les m\^emes pour toutes les particules d'une it\'eration ;
+\item \texttt{kernelUpdatePBest} : seuls les threads avec \texttt{i \% D == 0} travaillent, donc un par particule. Chacun compare sa position \`a son meilleur personnel et le remplace s'il est meilleur ;
+\item ensuite tous les meilleurs personnels sont recopi\'es sur le CPU, qui cherche le meilleur global avec une boucle, puis le renvoie au GPU.
 \end{itemize}
-Les blocs comptent 128 threads. Apr\`es chaque g\'en\'eration, l'h\^ote \'echange les pointeurs \texttt{popIn}/\texttt{popOut}, sans copie. \`A la fin, l'h\^ote r\'ecup\`ere la population et choisit le meilleur individu. Les figures~\ref{fig:usecase} et~\ref{fig:class} pr\'esentent la conception en UML (cas d'utilisation, structure des modules) et la figure~\ref{fig:sequence} l'organigramme d'ex\'ecution, des appels h\^ote aux noyaux.
+Il y a donc deux copies CPU$\leftrightarrow$GPU et une boucle CPU \`a chaque it\'eration, ce qui ralentit beaucoup le programme. En lisant le code, nous avons aussi relev\'e quelques probl\`emes. Dans Griewank, le produit commen\c cait \`a 0 au lieu de 1 et restait donc toujours nul ; nous l'avons corrig\'e partout. Le nombre de blocs \texttt{ceil(size / threadsNum)} est calcul\'e avec une division enti\`ere : quand $N_P\times D$ n'est pas un multiple de 32, les derni\`eres coordonn\'ees ne sont jamais mises \`a jour. Les tableaux \texttt{tempParticle1} et \texttt{tempParticle2} sont globaux et partag\'es par tous les threads, alors que chaque thread y \'ecrit sa particule. Enfin, \texttt{MAX\_ITER} compte des it\'erations et non des \'evaluations. Pour respecter le budget, nous donnons au PSO $10^4\times D/N_P$ it\'erations. \`A part la correction de Griewank, nous avons gard\'e le PSO tel quel pour qu'il serve de r\'ef\'erence.
 
+\subsubsection{v1 : un seul kernel}
+Pour le DE, nous avons gard\'e la m\^eme fonction \texttt{cuda\_pso} pour ne pas toucher \`a \texttt{main.cpp}. Toute la population reste sur le GPU du d\'ebut \`a la fin : une copie au d\'ebut, une copie \`a la fin. Le kernel \texttt{kernelDEGeneration} est lanc\'e une fois par g\'en\'eration avec un thread par individu. Chaque thread tire $r_1$, $r_2$, $r_3$, construit son essai, l'\'evalue et fait la s\'election. Comme dans la version CPU, on lit dans \texttt{popIn} et on \'ecrit dans \texttt{popOut}, puis le CPU \'echange les deux pointeurs. Sans cela, un thread pourrait remplacer un individu pendant qu'un autre thread le lit pour sa mutation.
 
+\subsubsection{v2 : un kernel par \'etape}
+Dans la v2, chaque \'etape a son propre kernel, comme dans la version de base de l'article \cite{qin} (figure~\ref{fig:organigramme}). \`A chaque g\'en\'eration, le CPU lance cinq kernels l'un apr\`es l'autre :
+\begin{itemize}
+\item (P) tire $r_1$, $r_2$, $r_3$ et $j_{\mathrm{rand}}$ et les range dans un tableau ;
+\item (M) calcule les mutants dans le tableau \texttt{mutant} ;
+\item (C) fait le croisement et \'ecrit les essais dans \texttt{trial} ;
+\item (E) \'evalue les essais (c'est le m\^eme kernel que pour la population de d\'epart) ;
+\item (S) remplace $x_i$ par $u_i$ quand l'essai est meilleur.
+\end{itemize}
+Les kernels se passent leurs r\'esultats par la m\'emoire globale. Le double buffer n'est plus n\'ecessaire : quand (S) d\'emarre, (M) est d\'ej\`a fini pour tous les individus, donc personne ne lit plus la population. On peut \'ecrire directement dedans. Les nombres al\'eatoires sont tir\'es dans le m\^eme ordre que dans la v1, et nous avons v\'erifi\'e que la v2 donne exactement les m\^emes r\'esultats que la v1 sur les 360 runs. Le code est plus facile \`a lire, mais il y a cinq lancements de kernel par g\'en\'eration au lieu d'un, et les tableaux interm\'ediaires font des allers-retours en m\'emoire globale.
 
-% ---------- Diagramme de cas d'utilisation ----------
-\begin{figure}[!t]
-\centering
-\begin{tikzpicture}[font=\footnotesize,
-  uc/.style={ellipse,draw,align=center,minimum width=3.4cm,minimum height=0.8cm,inner sep=1pt},
-  >={Stealth[length=2mm]}]
-  % acteur
-  \draw (-3.3,0.9) circle (0.15);
-  \draw (-3.3,0.75)--(-3.3,0.3) (-3.55,0.6)--(-3.05,0.6)
-        (-3.3,0.3)--(-3.5,-0.1) (-3.3,0.3)--(-3.1,-0.1);
-  \node at (-3.3,-0.4) {Utilisateur};
-  % syst\`eme
-  \draw (-2.2,-2.9) rectangle (4.6,2.8);
-  \node[anchor=north] at (1.2,2.8) {Application DE};
-  \node[uc] (u1) at (0,2.0) {Choisir la fonction objectif};
-  \node[uc] (u2) at (0,0.9) {Fixer Dim et Pop};
-  \node[uc] (u3) at (0,-0.3) {Lancer DE s\'equentiel (CPU)};
-  \node[uc] (u4) at (0,-1.5) {Lancer DE massivement\\parall\`ele (GPU)};
-  \node[uc] (u5) at (3.2,-0.9) {Comparer temps\\et minimum};
-  \foreach \u in {u1,u2,u3,u4} \draw (-3.1,0.5)--(\u.west);
-  \draw[->,dashed] (u5.north west) -- node[above,font=\tiny,sloped]{$\langle\langle$include$\rangle\rangle$} (u3.east);
-  \draw[->,dashed] (u5.south west) -- (u4.east);
-\end{tikzpicture}
-\caption{Diagramme de cas d'utilisation.}
-\label{fig:usecase}
-\end{figure}
+\subsubsection{v3 : un thread par coordonn\'ee}
+Avec un thread par individu, une population de 50 n'occupe que 50 threads alors que le GPU peut en faire tourner des dizaines de milliers. Et chaque thread fait une boucle sur les $D$ coordonn\'ees. Dans la v3, nous gardons les m\^emes kernels que la v2, mais chaque thread s'occupe d'une seule coordonn\'ee. Avec 100 individus en 3 dimensions $(x,y,z)$, on lance 300 threads au lieu de 100 (figure~\ref{fig:threads}). Le thread $k$ traite l'individu $i=k/D$ et la coordonn\'ee $d=k \bmod D$, c'est-\`a-dire la case $k$ du tableau de la population. C'est l'id\'ee de la version am\'elior\'ee de l'article (cudaDEi), et c'est aussi ce que fait d\'ej\`a \texttt{kernelUpdateParticle} dans le PSO fourni. Ce changement nous a oblig\'es \`a modifier plusieurs choses :
+\begin{enumerate}
+\item Les indices $r_1$, $r_2$, $r_3$ et $j_{\mathrm{rand}}$ doivent \^etre les m\^emes pour toutes les coordonn\'ees d'un individu. Le kernel (P) garde donc un thread par individu et range les indices en m\'emoire globale. Les autres kernels les relisent.
+\item Pour le croisement, chaque coordonn\'ee tire son propre nombre al\'eatoire. Il faut donc un \'etat cuRAND par coordonn\'ee, soit $N_P\times D$ \'etats au lieu de $N_P$.
+\item L'\'evaluation est la partie la plus difficile. $f$ est une somme sur les coordonn\'ees (plus un produit pour Griewank), donc un thread ne peut pas la calculer seul. Nous avons r\'e\'ecrit la fonction objectif en une fonction \texttt{terme} qui calcule la part d'une seule coordonn\'ee. Pour Rosenbrock, le terme $d$ a besoin de la coordonn\'ee $d+1$, que le thread va lire en m\'emoire globale. Ensuite, il faut additionner les $D$ termes. Pour cela, tous les threads d'un m\^eme individu sont plac\'es dans le m\^eme bloc et \'ecrivent leur terme en m\'emoire partag\'ee. On fait alors une r\'eduction : \`a chaque tour, la premi\`ere moiti\'e des threads ajoute la case de la seconde moiti\'e, avec \texttt{\_\_syncthreads()} entre deux tours, jusqu'\`a ce qu'il ne reste qu'une case. Comme cette m\'ethode demande une puissance de 2, le bloc a une largeur de 16, 64 ou 128 pour $D=10$, 50 ou 100, et les threads en trop ajoutent 0 (ou multiplient par 1 pour le produit). Pour ne pas avoir des blocs trop petits, un bloc traite plusieurs individus : 8 pour $D=10$, 2 pour $D=50$ et 1 pour $D=100$, soit toujours 128 threads.
+\item Pour la s\'election, chaque thread recopie sa coordonn\'ee si l'essai est meilleur, et le thread de la coordonn\'ee 0 met \`a jour la fitness. Mais si ce thread \'ecrit la nouvelle fitness alors que les autres threads du m\^eme individu ne l'ont pas encore lue, ils comparent avec une mauvaise valeur. On lit donc la fitness dans un tableau et on l'\'ecrit dans un autre, \'echang\'es \`a chaque g\'en\'eration.
+\end{enumerate}
+Comme les nombres al\'eatoires ne sont plus tir\'es dans le m\^eme ordre, la v3 ne donne pas exactement les m\^emes r\'esultats que la v1. On v\'erifie avec des tests statistiques que la qualit\'e reste la m\^eme (section~IV). Cette version a deux limites : $D$ doit rester inf\'erieur ou \'egal \`a 1024 (nombre maximum de threads par bloc) et, pour $D=10$, 6 threads sur 16 ne servent \`a rien pendant l'\'evaluation.
 
-% ---------- Diagramme de classes / fichiers ----------
-\begin{figure}[!t]
-\centering
-\begin{tikzpicture}[font=\scriptsize,
-  cls/.style={draw,rectangle split,rectangle split parts=2,align=left,text width=3.7cm},
-  >={Stealth[length=2mm]}]
-  \node[cls] (main) at (0,2.4) {\textbf{main.cpp}\nodepart{second}%
-    main()\\ initialise positions, pBests\\ mesure le temps\\ affiche le minimum};
-  \node[cls] (host) at (-2.2,-0.4) {\textbf{kernel.cpp (h\^ote)}\nodepart{second}%
-    host\_fitness\_function(x)\\ getRandom(low, high)\\ getRandomClamped()};
-  \node[cls] (cu) at (2.2,-0.4) {\textbf{kernel.cu (GPU)}\nodepart{second}%
-    cuda\_pso(positions, gBest)\\ kernelInitRandom\\ kernelEvaluate\\ kernelDEGeneration\\ fitness\_function(x)};
-  \node[cls] (h) at (0,-3.4) {\textbf{kernel.h}\nodepart{second}%
-    NUM\_OF\_PARTICLES, NUM\_OF\_DIMENSIONS\\ SELECTED\_OBJ\_FUNC, bornes};
-  \draw[->,dashed] (main) -- (host);
-  \draw[->,dashed] (main) -- (cu);
-  \draw[->,dashed] (host) -- (h);
-  \draw[->,dashed] (cu) -- (h);
-\end{tikzpicture}
-\caption{Diagramme de classes simplifi\'e (modules du code, d\'ependances).}
-\label{fig:class}
-\end{figure}
+\input{figures_tikz}
 
-% ---------- Organigramme (style de l'article) ----------
-\begin{figure}[!t]
-\centering
-\begin{tikzpicture}[font=\fontsize{6}{7}\selectfont,>={Stealth[length=1.5mm]},x=1cm,y=1cm,
-  hb/.style={draw,rounded corners=4pt,align=center,minimum width=2.1cm,minimum height=0.55cm,inner sep=1pt},
-  kb/.style={draw,align=center,minimum width=3.1cm,minimum height=0.6cm,inner sep=1pt},
-  rw/.style={font=\fontsize{5}{6}\selectfont\bfseries}]
-  % en-t\^etes
-  \node[font=\fontsize{6}{7}\selectfont\bfseries,align=center] at (1.2,0.35) {CPU (h\^ote)\\1 thread};
-  \node[font=\fontsize{6}{7}\selectfont\bfseries,align=center] at (4.9,0.35) {GPU (device)\\\textit{gridDim $\times$ blockDim threads}};
-  \draw[dashed,gray] (2.75,0.8) -- (2.75,-7.4);
-  % barre m\'emoire globale
-  \node[draw,fill=gray!25,minimum width=0.4cm,minimum height=6.2cm,inner sep=0] (gm) at (7.9,-3.4) {};
-  \node[rotate=-90,font=\fontsize{6}{7}\selectfont\bfseries] at (7.9,-3.4) {M\'emoire globale};
-  % h\^ote
-  \node[hb] (init) at (1.2,-0.7) {Allocation m\'emoire\\Copie H$\to$D};
-  \node[draw,diamond,aspect=2.4,inner sep=0pt,align=center] (dec) at (1.2,-4.3) {g\'en\'eration\\$<$ maxGen ?};
-  \node[hb] (ret) at (1.2,-6.6) {Retourner le\\meilleur individu};
-  % noyaux
-  \node[kb] (ki) at (4.9,-1.4) {\textbf{kernel (I)}\\[-1pt]\textcolor{gray}{kernelInitRandom}};
-  \node[kb] (ke) at (4.9,-2.9) {\textbf{kernel (E)}\\[-1pt]\textcolor{gray}{kernelEvaluate}};
-  \node[kb,minimum height=1.5cm] (kg) at (4.9,-4.9) {\textbf{kernel (G)}\\[-1pt]\textcolor{gray}{kernelDEGeneration :}\\[-1pt]\textcolor{gray}{mutation, croisement,}\\[-1pt]\textcolor{gray}{\'evaluation, s\'election}};
-  % fl\`eches h\^ote -> noyaux
-  \draw[->] (init.south) -- ++(0,-0.35) -| node[pos=0.25,above,rw]{kernel call} (ki.west);
-  \draw[->] (init.south)++(0,-0.35) -- ++(0,0) ;
-  \draw[->] (1.2,-1.05) |- node[pos=0.8,above,rw]{kernel call} (ke.west);
-  \draw[->] (1.2,-2.9) -- (dec.north);
-  \draw[->] (dec.east) -- node[above,rw]{oui} node[below,rw]{kernel call} (kg.west |- dec.east);
-  \draw[->] (dec.south) -- node[right,rw]{non} (ret.north);
-  % boucle de retour
-  \draw[->] (kg.south) -- ++(0,-0.35) -| (2.45,-3.55) -- (1.2,-3.55);
-  % lectures / \'ecritures m\'emoire
-  \foreach \k/\yy in {ki/-1.4,ke/-2.9,kg/-4.9}{
-    \draw[<-] ($(\k.east)+(0,0.12)$) -- node[above,rw]{read} ($(gm.west |- \k.east)+(0,0.12)$);
-    \draw[->] ($(\k.east)+(0,-0.12)$) -- node[below,rw]{write} ($(gm.west |- \k.east)+(0,-0.12)$);
-  }
-\end{tikzpicture}
-\caption{Organigramme du DE massivement parall\`ele (un thread par individu).}
-\label{fig:sequence}
-\end{figure}
-
+%--------------------------------------------------------------
 \section{R\'esultats exp\'erimentaux}
 
 \subsection{Configuration}
-\textbf{Mat\'eriel et logiciel.} CPU Intel Core i7-8700K (3,7~GHz), GPU NVIDIA RTX 2080 Ti, Arch Linux, pilote 615.71, CUDA~13.4, GCC~15 (\texttt{-O2}).
+Machine : processeur Intel Core i7-8700K (3,7~GHz), carte NVIDIA RTX 2080 Ti, Arch Linux, CUDA~13.4, GCC~15. Tout est compil\'e en \texttt{-O2}, et pour \texttt{sm\_75} c\^ot\'e GPU.
 
-\textbf{Algorithmes compar\'es.} (a) DE s\'equentiel (CPU), (b) DE massivement parall\`ele (GPU), (c) PSO fourni par l'enseignant (GPU), conserv\'e tel quel ($\omega=0{,}5$, $c_1=c_2=1{,}5$). Le PSO compte des it\'erations et non des \'evaluations : nous lui donnons $10^4\times D/N_P$ it\'erations, soit le m\^eme nombre d'\'evaluations que le DE.
+Nous comparons cinq programmes : le DE s\'equentiel (CPU), les DE GPU v1, v2 et v3, et le PSO du professeur ($\omega=0{,}5$, $c_1=c_2=1{,}5$). Le sujet demande $N_P\in\{50,100,500\}$, $D\in\{10,50,100\}$, un budget de $10^4\times D$ \'evaluations et 10 runs par cas. Avec les 4 fonctions, cela fait 36 cas par programme, donc 1800 runs. Nous avons aussi refait le DE CPU et le DE GPU v1 avec $CR=0{,}3$ (720 runs de plus).
 
-\textbf{Protocole.} $\mathrm{Pop}\in\{50,100,500\}$, $D\in\{10,50,100\}$, budget de $10^4\times D$ \'evaluations, 10 ex\'ecutions par configuration (graine initiale fixe 12345), soit $3\times 4\times 9\times 10=1080$ ex\'ecutions. Une seconde s\'erie, pour le seul DE (CPU et GPU), reprend le param\`etre de l'article, $CR=0{,}3$ (720 ex\'ecutions suppl\'ementaires) ; les r\'esultats de la premi\`ere s\'erie ($CR=0{,}9$) sont conserv\'es. On rapporte la moyenne de l'erreur (les \'ecarts-types sont dans \texttt{results/summary.csv} et servent aux tests statistiques) $\mathrm{EFV}=f(x_{\mathrm{best}})-f(x^\star)$, calcul\'ee en double pr\'ecision \`a partir de la meilleure solution, et le temps r\'eel moyen. Un run de chauffe (initialisation du contexte CUDA) est exclu. Le temps GPU inclut allocations, transferts et noyaux. Les tests statistiques sont le test de Wilcoxon de la somme des rangs (seuil $5\,\%$) et le test de Kruskal-Wallis.
+\texttt{main.cpp} ne fait qu'un run et affiche la fitness en \texttt{float}. Nous avons donc \'ecrit un petit programme de test (\texttt{bench\_main.cpp}) qui appelle la m\^eme fonction \texttt{cuda\_pso}, fait les 10 runs et calcule l'erreur en double pr\'ecision. La graine est fix\'ee (12345), donc les cinq programmes partent des m\^emes populations de d\'epart. Le temps mesur\'e est le temps r\'eel de l'appel \`a \texttt{cuda\_pso}, avec les allocations et les copies. Un premier run, qui sert \`a initialiser CUDA, n'est pas compt\'e. Dim, Pop et la fonction sont choisis \`a la compilation (\texttt{make dim DIM=50 POP=100 OBJ\_FUNC=1}), car le code fourni utilise des constantes pour la taille des tableaux.
+
+Pour chaque cas, on donne la moyenne et l'\'ecart-type de l'erreur $f(x_{\mathrm{meilleur}})-f(x^\star)$ sur les 10 runs. Pour savoir si deux programmes donnent des r\'esultats vraiment diff\'erents, on utilise le test de Wilcoxon (somme des rangs) et le test de Kruskal-Wallis avec un seuil de $5\,\%$ : si $p<0{,}05$, on consid\`ere que la diff\'erence n'est pas due au hasard.
 
 \subsection{Fonctions de test}
-Les quatre fonctions sont d\'ecal\'ees, avec $z=x-o$ et un d\'ecalage $o=0$ dans le code fourni, sur le domaine $[-5{,}12;5{,}12]^D$ (les formules sont celles de \cite{qin, suganthan}) :
+On utilise les quatre fonctions demand\'ees, en version d\'ecal\'ee \cite{suganthan}, avec $z=x-o$. Dans le code fourni le d\'ecalage $o$ vaut 0, donc $z=x$ :
 \begin{align*}
 f_{\mathrm{Sphere}}&=\sum_{i=1}^{D}z_i^2-450,\\
 f_{\mathrm{Rastrigin}}&=\sum_{i=1}^{D}\bigl(z_i^2-10\cos(2\pi z_i)+10\bigr)-330,\\
-f_{\mathrm{Rosenbrock}}&=\sum_{i=1}^{D-1}\bigl(100(z_i^2-z_{i+1})^2\\&\quad+(z_i-1)^2\bigr)+390,\ z=x+1,\\
+f_{\mathrm{Rosenbrock}}&=\sum_{i=1}^{D-1}\bigl(100(z_i^2-z_{i+1})^2+(z_i-1)^2\bigr)+390,\\
+&\quad\text{avec ici } z=x+1,\\
 f_{\mathrm{Griewank}}&=\sum_{i=1}^{D}\frac{z_i^2}{4000}-\prod_{i=1}^{D}\cos\frac{z_i}{\sqrt{i}}+1-180.
 \end{align*}
-Leur minimum global est atteint en $x=0$ et vaut respectivement $-450$, $-330$, $390$ et $-180$ ; l'EFV est la diff\'erence \`a cette valeur. Dans le code fourni, le produit de Griewank \'etait initialis\'e \`a~0 au lieu de~1, ce qui annulait le terme en cosinus ; nous l'avons corrig\'e (y compris dans la copie du PSO utilis\'ee comme r\'ef\'erence). Les calculs se font en simple pr\'ecision, avec le biais ajout\'e \`a la valeur : la r\'esolution de la fitness autour de $-450$ est d'environ $3\times10^{-5}$.
+Le minimum est en $x=0$ et vaut $-450$, $-330$, $390$ et $-180$. Sphere est la plus facile : une seule ``cuvette''. Rastrigin et Griewank ont \'enorm\'ement de minimums locaux. Rosenbrock a un seul minimum, mais au fond d'une vall\'ee longue et plate o\`u l'algorithme avance lentement.
+
+Les calculs sont en \texttt{float}. Comme on ajoute $-450$ (ou une autre constante) au r\'esultat, deux fitness ne peuvent plus \^etre distingu\'ees si elles diff\`erent de moins de $3\times10^{-5}$ environ. C'est pourquoi l'erreur ne descend presque jamais sous $10^{-5}$ dans nos tableaux.
 
 \subsection{R\'esultats}
-Les tableaux~\ref{tab:sphere} \`a~\ref{tab:griewank} donnent la qualit\'e pour toutes les configurations, le tableau~\ref{tab:temps} les temps, les figures~\ref{fig:temps10} et~\ref{fig:temps} les courbes de temps ($D=10$ et $D=100$), le tableau~\ref{tab:speedup} l'acc\'el\'eration et le tableau~\ref{tab:sr} les taux de succ\`es.
 
-\textbf{DE GPU contre DE s\'equentiel.} Les deux versions impl\'ementent le m\^eme algorithme avec des g\'en\'erateurs al\'eatoires diff\'erents. Leurs EFV ne diff\`erent significativement (Wilcoxon, $p<0{,}05$) que dans 2 configurations sur 36, ce qui valide l'impl\'ementation GPU. L'acc\'el\'eration (tableau~\ref{tab:speedup}) varie de 0,47 \`a 27 avec une m\'ediane de 3,5. Elle augmente avec la population et la dimension, car le GPU dispose de plus de threads : elle est maximale pour $\mathrm{Pop}=500$. \`A l'inverse, le GPU est plus lent que le CPU dans 3 configurations (Sphere $D{=}50$ Pop 50, Rosenbrock $D{=}50$ Pop 50 et 100). Avec un thread par individu, seuls 50 \`a 100 threads travaillent et le nombre de g\'en\'erations, donc de lancements de noyaux, est \'elev\'e (jusqu'\`a $2\times10^4$) ; la latence de lancement explique vraisemblablement ce r\'esultat, sans que nous l'ayons confirm\'e par profilage.
+\subsubsection{Qualit\'e des solutions}
+Les tableaux~\ref{tab:sphere} \`a~\ref{tab:griewank} donnent l'erreur moyenne pour tous les cas. Les quatre versions du DE ont la m\^eme qualit\'e. La v2 donne exactement les m\^emes nombres que la v1, ce qui est normal puisqu'elle fait les m\^emes calculs dans le m\^eme ordre. Le test de Wilcoxon ne trouve une diff\'erence entre le CPU et la v1 que dans 2 cas sur 36, entre le CPU et la v3 dans aucun cas, et entre la v1 et la v3 dans 2 cas. Le test de Kruskal-Wallis sur les quatre versions trouve une diff\'erence dans 2 cas sur 36. Avec un seuil de $5\,\%$, on s'attend \`a environ 2 cas sur 36 juste par hasard. Nos versions GPU ne changent donc pas le r\'esultat de l'algorithme, elles le calculent juste plus vite.
 
-\textbf{DE contre PSO de r\'ef\'erence.} \`A budget d'\'evaluations \'egal, le DE GPU obtient une EFV moyenne plus faible que le PSO dans 32 configurations sur 36, avec une diff\'erence significative dans 34 sur 36. Sur Sphere $D{=}100$, Pop 100, le DE atteint $3{,}7\times10^{-5}$ contre environ $114$ pour le PSO. Le PSO est aussi nettement plus lent (il recopie les meilleurs personnels vers le CPU \`a chaque it\'eration). Ses mauvais r\'esultats tiennent probablement en partie \`a des d\'efauts du code fourni, que nous n'avons pas corrig\'es : le nombre de blocs est calcul\'e par une division enti\`ere, et les tableaux temporaires \texttt{tempParticle1/2} sont des variables globales partag\'ees par tous les threads. Il s'agit d'une hypoth\`ese, que nous n'avons pas test\'ee.
+\`A budget \'egal, le DE fait beaucoup mieux que le PSO fourni. La diff\'erence est significative dans 34 cas sur 36, et la v3 a une erreur moyenne plus faible dans 33 cas. Par exemple, pour Sphere avec $D=100$ et Pop 100, l'erreur est de l'ordre de $10^{-5}$ pour le DE et de 114 pour le PSO. Le PSO n'est meilleur que sur Rastrigin avec Pop 500, o\`u toutes les m\'ethodes restent loin du minimum. Les d\'efauts du PSO cit\'es en section~III jouent probablement un r\^ole, mais nous ne l'avons pas v\'erifi\'e.
 
-\textbf{Effet de la population.} Le budget \'etant fixe, une grande population signifie peu de g\'en\'erations ($G=200$ pour $D{=}10$, Pop~500). Pour Sphere $D{=}50$, l'EFV passe de $1{,}4\times10^{-5}$ (Pop 100) \`a $0{,}21$ (Pop 500) : l'algorithme n'a pas converg\'e. Pour Rastrigin, la meilleure qualit\'e est obtenue avec la plus petite population. Une grande population n'est donc avantageuse que pour le temps, pas pour la qualit\'e.
+Le budget est fixe, donc une grande population veut dire peu de g\'en\'erations : 200 pour $D=50$ et Pop 500. Dans ce cas l'algorithme n'a pas le temps de converger. Pour Sphere avec $D=50$, l'erreur passe de $10^{-5}$ avec Pop 100 \`a $0{,}2$ avec Pop 500. Pour Rastrigin, la meilleure qualit\'e est presque toujours obtenue avec Pop 50. Une grande population fait gagner du temps sur GPU, mais pas de la qualit\'e.
 
-\textbf{Taux de succ\`es et comparaison avec la litt\'erature.} L'article \cite{qin} d\'efinit un succ\`es par une EFV $<10^{-8}$. Avec notre code, ce taux est nul partout, quel que soit $CR$, y compris sur Sphere (l'article y obtient 1,00) : l'erreur ne descend pas sous environ $10^{-5}$ \`a cause de la r\'esolution de la fitness en simple pr\'ecision avec biais (\S IV-B). Nous rapportons donc dans le tableau~\ref{tab:sr} un seuil plus permissif de $10^{-4}$, et la comparaison est \emph{favorable \`a notre code}. Les temps de l'article ne sont pas compar\'es, le mat\'eriel \'etant diff\'erent. Pour Sphere et Griewank, nos taux valent 1,00 (0,90 pour Griewank $D{=}100$ Pop 50) \`a $D\in\{50,100\}$ pour Pop 50 et 100, comme ceux de l'article, mais sont plus bas \`a $D{=}10$ pour Griewank (0,20 et 0,80 contre 1,00). Pour Rosenbrock, difficile pour les deux, nous obtenons 1,00 \`a $D{=}10$, Pop 100 (0,32 pour l'article) mais 0 pour Pop 50 et 500 (0,44 et 0 pour l'article). Pour Rastrigin, notre DE est moins bon : l'article obtient 1,00 \`a $D{=}10$ sur les trois populations, nous 0,50 pour Pop 50 et 0 ensuite. Pour Pop 500, l'article obtient 1,00 sur Sphere et sur Griewank (sauf $D{=}100$ : 0,96), nous 0, du fait du faible nombre de g\'en\'erations.
+\subsubsection{Temps de calcul}
+Le tableau~\ref{tab:temps} donne le temps moyen, le tableau~\ref{tab:speedup} l'acc\'el\'eration par rapport au CPU et les figures~\ref{fig:temps10} et~\ref{fig:temps100} les courbes de temps. Le temps du CPU ne d\'epend presque pas de la population, car il fait toujours le m\^eme nombre d'\'evaluations. Sur GPU, au contraire, le temps baisse quand la population augmente : il y a moins de g\'en\'erations, donc moins de lancements de kernel, et plus de threads travaillent en m\^eme temps. Le PSO est le plus lent partout (jusqu'\`a 18~s pour $D=100$), \`a cause de ses copies CPU$\leftrightarrow$GPU \`a chaque it\'eration.
 
-\textbf{Effet du param\`etre $CR$ (am\'elioration du DE).} L'article utilise $F=0{,}5$ et $CR=0{,}3$ \cite{qin}, alors que notre premi\`ere s\'erie utilisait $CR=0{,}9$. Nous avons donc relanc\'e le DE (CPU et GPU) avec $CR=0{,}3$, tout le reste \'etant identique. Les tableaux~\ref{tab:sr} et~\ref{tab:cr} comparent les deux r\'eglages. L'effet n'est pas uniforme : l'EFV moyenne du DE GPU est meilleure avec $CR=0{,}3$ dans 19 configurations sur 36 et moins bonne dans 17. Les gains concernent les fonctions \`a structure s\'eparable (ou presque) et surtout les grandes populations, qui disposent de peu de g\'en\'erations : pour Pop 500, Sphere $D{=}50$ passe de $0{,}21$ \`a $4{,}3\times10^{-5}$ (taux de succ\`es 0 \`a 1,00), Griewank $D{=}50$ et $D{=}100$ passent de 0 \`a 1,00. Pour Rastrigin $D{=}10$, le taux de succ\`es passe de 0,50 et 0 \`a 1,00 pour Pop 50 et 100, comme dans l'article ; il reste nul pour Pop 500 (EFV moyenne $5{,}7$). Griewank $D{=}10$ passe de 0,20 \`a 0,90 (Pop 50). En revanche, $CR=0{,}3$ d\'et\'eriore Rosenbrock $D{=}10$, Pop 100 (de 1,00 \`a 0, EFV moyenne $4{,}3$), et Rastrigin avec Pop 50 (EFV moyenne de 34 \`a 150 pour $D{=}50$ et de 95 \`a 550 pour $D{=}100$). Une explication plausible, que nous n'avons pas v\'erifi\'ee, est qu'un $CR$ faible modifie peu de composantes par essai, ce qui aide sur les fonctions s\'eparables mais p\'enalise Rosenbrock, dont les variables sont coupl\'ees. Avec $CR=0{,}3$, le DE GPU reste statistiquement \'equivalent au DE s\'equentiel (1 configuration sur 36 diff\'erente) et l'acc\'el\'eration va de 0,66 \`a 30 (m\'ediane 4,0). Notre taux de succ\`es se rapproche donc de celui de l'article sur Sphere, Griewank et Rastrigin $D{=}10$, mais l'\'ecart subsiste sur Rastrigin Pop 500, sur Sphere $D{=}100$ Pop 500 et sur Griewank $D{=}10$ Pop 500 ; le nombre de runs (10 contre 25) et la pr\'ecision de calcul peuvent aussi jouer.
+La v1 va jusqu'\`a 27 fois plus vite que le CPU (m\'ediane 3,5 sur les 36 cas). Elle est plus lente que le CPU dans 3 cas avec $D=50$ et Pop 50 ou 100 : seulement 50 ou 100 threads travaillent, et chacun fait seul toute la boucle sur les coordonn\'ees.
+
+La v2 est en g\'en\'eral plus lente que la v1 : 1,4 fois plus lente en m\'ediane, et jusqu'\`a 3 fois. Elle est plus lente que le CPU dans 6 cas, tous avec Pop 50. Le tableau~\ref{tab:profil} montre le temps de chaque kernel. Pour $D=10$ et Pop 50, chaque kernel prend environ 3 \`a 5~$\mu$s, quel que soit son travail : c'est surtout le co\^ut du lancement. La v2 lance 5 kernels par g\'en\'eration au lieu d'un, sur 2000 g\'en\'erations. Pour $D=100$, les kernels (M), (C) et (E) de la v2 sont longs (18 \`a 37~$\mu$s), car chaque thread fait une boucle de 100 tours et relit en m\'emoire globale les tableaux \'ecrits par le kernel d'avant. Il y a aussi une raison connue sur GPU : quand les 32 threads d'un warp lisent des cases voisines en m\'emoire, le GPU les charge en une seule fois. Dans la v1 et la v2, le thread $i$ lit la case $i\times D+d$, donc deux threads voisins lisent des cases \'eloign\'ees de $D$ cases, et le GPU doit faire beaucoup plus de lectures. Pour $D=50$, la v1 et la v2 ont presque le m\^eme temps ; nous n'avons pas cherch\'e plus loin pourquoi.
+
+La v3 est la plus rapide d\`es que $D\ge50$ : jusqu'\`a 89 fois plus rapide que le CPU (m\'ediane 8,4 sur les 36 cas), et 2,4 \`a 6,8 fois plus rapide que la v1 pour $D=50$ et $D=100$. Ici, des threads voisins lisent des cases voisines, et il y a $N_P\times D$ threads, par exemple $50\,000$ pour Pop 500 et $D=100$, ce qui occupe bien le GPU. Dans le tableau~\ref{tab:profil}, tous ses kernels restent entre 3 et 5~$\mu$s environ, m\^eme pour $D=100$. Par contre, pour $D=10$, la v3 est plus lente que la v1 (environ 1,5 fois). Chaque kernel a tr\`es peu de travail, donc le temps est surtout celui des 5 lancements par g\'en\'eration, contre un seul pour la v1. C'est pour cela que l'article regroupe les kernels de la boucle en un seul (kernel MCER de cudaDEi \cite{qin}) tout en gardant un thread par coordonn\'ee.
+
+\begin{table}[!t]\centering\scriptsize\setlength{\tabcolsep}{3pt}
+\caption{Temps moyen d'un lancement de chaque kernel ($\mu$s), Rastrigin. Mesur\'e avec \texttt{cudaEvent} (option \texttt{-DPROFIL}) ; la mesure ajoute une attente apr\`es chaque kernel, donc ces temps servent seulement \`a comparer les kernels entre eux.}\label{tab:profil}
+\begin{tabular}{ll|ccccc|c}\toprule Cas & Version & (P) & (M) & (C) & (E) & (S) & Total\\\midrule
+$D{=}10$, Pop 50  & v2 & 3,0 & 3,4 & 4,2 & 4,6 & 3,0 & 18,2\\
+(2000 g\'en.)       & v3 & 3,3 & 2,7 & 3,3 & 3,0 & 2,8 & 15,1\\\midrule
+$D{=}100$, Pop 100 & v2 & 3,1 & 18,1 & 20,7 & 36,5 & 3,7 & 82,1\\
+(10\,000 g\'en.)    & v3 & 3,7 & 2,9 & 4,6 & 3,3 & 2,8 & 17,3\\
+\bottomrule\end{tabular}\end{table}
+
+\subsubsection{Comparaison avec l'article}
+L'article \cite{qin} compte un succ\`es quand l'erreur est inf\'erieure \`a $10^{-8}$. Avec nos calculs en \texttt{float}, on n'arrive jamais \`a ce seuil, m\^eme sur Sphere (voir section~IV-B). Dans le tableau~\ref{tab:sr}, nous utilisons donc un seuil de $10^{-4}$, plus facile \`a atteindre : la comparaison est \`a notre avantage. Les temps de l'article ne sont pas compar\'es, car leur carte graphique (GTX 560) est beaucoup plus ancienne.
+
+Avec $CR=0{,}9$, nous avons le m\^eme taux que l'article (1,00) pour Sphere et Griewank avec $D=50$ ou $100$ et Pop 50 ou 100 (sauf Griewank, $D=100$, Pop 50 : 0,90). Nous sommes moins bons pour Griewank avec $D=10$ (0,20 et 0,80 au lieu de 1,00), pour Rastrigin avec $D=10$ (0,50 puis 0 au lieu de 1,00) et pour Pop 500, o\`u notre taux est souvent nul. Sur Rosenbrock, les deux sont faibles. Nous obtenons 1,00 avec $D=10$ et Pop 100, contre 0,32 dans l'article, mais 0 avec Pop 50, contre 0,44.
+
+\subsubsection{Essai d'am\'elioration : $CR=0{,}3$}
+Le sujet demande d'essayer d'am\'eliorer la qualit\'e. L'article utilise $CR=0{,}3$ alors que nous avions pris $CR=0{,}9$. Nous avons donc relanc\'e le DE CPU et la v1 avec $CR=0{,}3$, sans rien changer d'autre (tableaux~\ref{tab:sr} et~\ref{tab:cr}). Le r\'esultat d\'epend beaucoup de la fonction : $CR=0{,}3$ est meilleur dans 19 cas sur 36 et moins bon dans 17. Il aide surtout les grandes populations. Avec Pop 500, Sphere $D=50$ passe d'une erreur de $0{,}21$ \`a $4{,}3\times10^{-5}$ et Griewank $D=50$ et $D=100$ passent d'un taux de succ\`es de 0 \`a 1,00. Rastrigin $D=10$ passe aussi \`a 1,00 avec Pop 50 et 100, comme dans l'article. Par contre, Rosenbrock $D=10$, Pop 100 passe de 1,00 \`a 0, et Rastrigin avec Pop 50 devient bien moins bon pour $D=50$ (erreur de 34 \`a 146) et $D=100$ (de 95 \`a 554). Une explication possible, que nous n'avons pas v\'erifi\'ee : avec un $CR$ faible, l'essai ne change que peu de coordonn\'ees \`a la fois. Cela marche bien quand les variables sont ind\'ependantes (Sphere, Rastrigin), mais moins bien sur Rosenbrock o\`u chaque variable d\'epend de la suivante. Avec $CR=0{,}3$, le GPU reste \'equivalent au CPU (diff\'erence significative dans 1 cas sur 36).
 
 \begin{figure}[!t]
 \centering
 \includegraphics[width=\columnwidth]{figures/temps_d10.pdf}
-\caption{Temps d'ex\'ecution moyen (\'echelle logarithmique) en fonction de la population, $D=10$ (barres : \'ecart-type sur 10 runs).}
+\caption{Temps moyen d'un run selon la population, $D=10$ (\'echelles logarithmiques, barres : \'ecart-type sur 10 runs).}
 \label{fig:temps10}
 \end{figure}
 
 \begin{figure}[!t]
 \centering
 \includegraphics[width=\columnwidth]{figures/temps_d100.pdf}
-\caption{Temps d'ex\'ecution moyen en fonction de la population, $D=100$.}
-\label{fig:temps}
+\caption{Temps moyen d'un run selon la population, $D=100$.}
+\label{fig:temps100}
 \end{figure}
 
 \input{resultats_tables}
 
 %--------------------------------------------------------------
 \section{Conclusion}
-Nous avons transform\'e un PSO CUDA en DE/rand/1/bin, impl\'ement\'e en version s\'equentielle et en version GPU (un thread par individu), et compar\'e les deux au PSO d'origine sur quatre fonctions de test, trois dimensions et trois tailles de population. Le DE GPU est statistiquement \'equivalent au DE s\'equentiel en qualit\'e, jusqu'\`a 27 fois plus rapide, et nettement meilleur que le PSO de r\'ef\'erence \`a budget \'egal. Reprendre le param\`etre $CR=0{,}3$ de l'article am\'eliore nettement les grandes populations et Rastrigin $D{=}10$ et rapproche les taux de succ\`es de ceux de cudaDEi, mais d\'et\'eriore Rosenbrock ; l'effet d\'epend de la fonction.
+Nous avons \'etudi\'e le PSO CUDA fourni, puis nous l'avons transform\'e en DE/rand/1/bin. Nous avons \'ecrit une version CPU et trois versions GPU. Les quatre versions donnent des solutions de m\^eme qualit\'e (tests de Wilcoxon et de Kruskal-Wallis), et le DE est bien meilleur que le PSO fourni \`a budget \'egal.
 
-Limites : (i) la fitness en simple pr\'ecision avec biais emp\^eche d'atteindre le seuil $10^{-8}$ de l'article ; (ii) avec un thread par individu, le GPU est peu utilis\'e pour de petites populations, et il peut \^etre plus lent que le CPU ; (iii) le PSO de r\'ef\'erence a \'et\'e gard\'e tel quel (avec la seule correction de Griewank), donc la comparaison n'est pas \`a son meilleur niveau ; (iv) pour l'am\'elioration du DE, nous n'avons test\'e que $CR=0{,}3$ (valeur de l'article), pas d'autres strat\'egies ni un r\'eglage de $F$ ou de $CR$ par fonction. Perspectives : \'evaluer la fitness en parall\`ele sur les dimensions, regrouper les noyaux avec la m\'emoire partag\'ee comme dans \cite{qin}, calculer en double pr\'ecision, et choisir $CR$ selon la fonction ou l'adapter en cours d'ex\'ecution (DE/best/1, param\`etres auto-adaptatifs).
+Pour la vitesse, s\'eparer les \'etapes en plusieurs kernels (v2) rend le code plus clair mais plus lent, \`a cause des lancements de kernel en plus et des tableaux qui passent par la m\'emoire globale. Mettre un thread par coordonn\'ee (v3) est le changement qui compte le plus : la v3 va jusqu'\`a 89 fois plus vite que le CPU et jusqu'\`a 6,8 fois plus vite que la v1 quand $D\ge50$. Pour $D=10$, elle reste plus lente que la v1, car il y a trop peu de travail par kernel. Enfin, $CR=0{,}3$ am\'eliore les grandes populations et Rastrigin en $D=10$, mais d\'egrade Rosenbrock.
+
+Notre travail a des limites. Les calculs en \texttt{float} emp\^echent d'atteindre une erreur de $10^{-8}$, donc nous ne pouvons pas comparer nos taux de succ\`es \`a ceux de l'article avec le m\^eme seuil. Le PSO a \'et\'e gard\'e avec ses d\'efauts. Nous n'avons test\'e qu'une seule autre valeur de $CR$. Pour aller plus loin, on pourrait regrouper (M), (C), (E) et (S) en un seul kernel tout en gardant un thread par coordonn\'ee, comme cudaDEi, ce qui devrait r\'egler le probl\`eme de la v3 pour $D=10$. On pourrait aussi calculer en double pr\'ecision et essayer d'autres strat\'egies, comme DE/best/1 ou un $CR$ qui s'adapte pendant le run.
 
 %--------------------------------------------------------------
 \begin{thebibliography}{3}
@@ -221,5 +202,6 @@ Limites : (i) la fitness en simple pr\'ecision avec biais emp\^eche d'atteindre 
 \bibitem{storn} K.~Price, R.~Storn, and J.~Lampinen, \emph{Differential Evolution: A Practical Approach to Global Optimization}. Springer, 2005.
 \bibitem{suganthan} P.~N. Suganthan \emph{et al.}, ``Problem definitions and evaluation criteria for the CEC 2005 special session on real-parameter optimization,'' Tech. Rep., Nanyang Technological University, 2005.
 \end{thebibliography}
+
 
 \end{document}

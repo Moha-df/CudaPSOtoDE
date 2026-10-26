@@ -3,3 +3,6 @@ build/
 *.log
 *.out
 *.o
+*.md
+*.bak
+rapport/ancien/

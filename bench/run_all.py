@@ -2,7 +2,8 @@
 """Compile et lance toutes les configurations -> results/raw.csv
    3 implementations (cpu = DE sequentiel, gpu = DE GPU, pso = PSO du prof)
    x 4 fonctions x Dim in {10,50,100} x Pop in {50,100,500}, 10 runs chacune.
-   Usage : python3 bench/run_all.py [nb_runs]   (relancable : saute ce qui est deja fait)"""
+   Usage : python3 bench/run_all.py [nb_runs] [CR] [impls]   (relancable : saute ce qui est deja fait)
+   ex : python3 bench/run_all.py 10 0.9f split,dim   (versions 2 et 3 du DE GPU)"""
 import itertools, os, subprocess, sys, csv
 from concurrent.futures import ThreadPoolExecutor
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -10,6 +11,7 @@ RUNS = int(sys.argv[1]) if len(sys.argv) > 1 else 10
 CR = sys.argv[2] if len(sys.argv) > 2 else "0.9f"   # ex: 0.3f (article)
 SUF = "" if CR == "0.9f" else "_cr" + CR.replace(".", "p")
 IMPLS, FUNCS, DIMS, POPS = ["cpu", "gpu", "pso"] if CR == "0.9f" else ["cpu", "gpu"], [1, 2, 3, 4], [10, 50, 100], [50, 100, 500]
+if len(sys.argv) > 3: IMPLS = sys.argv[3].split(",")
 os.makedirs(f"{ROOT}/results", exist_ok=True)
 RAW = f"{ROOT}/results/raw{SUF}.csv"   # anciens resultats (raw.csv) jamais ecrases
 

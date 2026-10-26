@@ -30,7 +30,7 @@
 #define F_MUT  0.5f   // facteur de mutation (identique au GPU)
 #ifndef CR
 #define CR     0.9f   // taux de croisement  (identique au GPU)
-#endif   // [MODIF] surchargeable : -DCR=0.3f (valeur de l'article, voir MODIFICATIONS.md)
+#endif   // [MODIF] surchargeable : -DCR=0.3f (valeur de l'article)
 
 /* ---------------------------------------------------------------------
    Un essai pour un individu : mutation -> croisement -> bornes

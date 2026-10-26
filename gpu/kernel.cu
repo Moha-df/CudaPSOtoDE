@@ -1,4 +1,4 @@
-Q#include <cuda_runtime.h>
+#include <cuda_runtime.h>
 #include <cuda.h>
 #include <curand_kernel.h>
 
@@ -31,7 +31,7 @@ Q#include <cuda_runtime.h>
 #define F_MUT  0.5f   // facteur de mutation
 #ifndef CR
 #define CR     0.9f   // taux de croisement
-#endif   // [MODIF] surchargeable : -DCR=0.3f (valeur de l'article, voir MODIFICATIONS.md)
+#endif   // [MODIF] surchargeable : -DCR=0.3f (valeur de l'article)
 
 /* ---------------------------------------------------------------------
    Fonction objectif, executee sur le GPU, appelee depuis le GPU.
