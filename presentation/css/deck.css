@@ -60,9 +60,10 @@ html, body { background: var(--paper); }
 }
 
 /* mise en page */
-.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: start; }
-.cols.wide-right { grid-template-columns: 0.85fr 1.15fr; }
-.cols.wide-left { grid-template-columns: 1.2fr 0.8fr; }
+.cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 48px; align-items: start; }
+.cols.wide-right { grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); }
+.cols.wide-left { grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr); }
+.cols > * { min-width: 0; }
 .stack > * + * { margin-top: 18px; }
 
 /* petites listes sans puces decoratives */
@@ -111,7 +112,17 @@ svg .mono { font-family: var(--code); }
 .dimbtns button[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 .dimbtns button:focus-visible { outline: 3px solid var(--v1); outline-offset: 2px; }
 
-.chartbox { position: relative; height: 470px; }
+/* Chart.js mesure son parent avec getBoundingClientRect, qui inclut le zoom de reveal :
+   sans ces bornes, le graphique deborde quand la fenetre n'est pas en 1280x720 */
+.chartbox { position: relative; height: 470px; width: 100%; overflow: hidden; }
+.chartbox canvas { max-width: 100%; max-height: 100%; }
+
+/* panneaux qui se remplacent sur place (slide v3) */
+.panels { position: relative; }
+.panels > .panel { position: absolute; inset: 0 0 auto 0; opacity: 0; }
+.panels > .panel:first-child { opacity: 1; }
+.panel .lead { max-width: none; }
+.formule { font-size: 26px; background: var(--paper-2); border-radius: 6px; padding: 12px 18px; display: inline-block; margin: 6px 0 14px; }
 
 /* barre de progression et numero */
 .reveal .progress { color: var(--ink); height: 4px; }

@@ -13,7 +13,7 @@
 
 <!-- ============================================================ 1 -->
 <section data-anim="titre">
-  <svg id="titre-grid" width="560" height="420" style="position:absolute;right:56px;top:150px" aria-hidden="true"></svg>
+  <canvas id="titre-land" class="land" width="1240" height="920" style="position:absolute;right:20px;top:120px;width:620px;height:460px" aria-hidden="true"></canvas>
   <div style="margin-top:110px;max-width:560px">
     <h1>Évolution différentielle sur GPU</h1>
     <p class="lead" style="margin-top:26px;max-width:520px">Du PSO fourni à trois versions CUDA du DE, comparées à la version séquentielle.</p>
@@ -28,32 +28,27 @@
 
 <!-- ============================================================ 2 -->
 <section data-anim="probleme">
-  <div class="cols wide-left">
+  <h2 style="max-width:none">Beaucoup de puits, un seul minimum</h2>
+  <svg id="puits-svg" width="1136" height="300" viewBox="0 0 1136 300"></svg>
+  <div class="cols" style="margin-top:18px">
     <div>
-      <h2>Trouver le point le plus bas</h2>
-      <p class="fragment fade-up" data-fragment-index="0">Une descente classique reste bloquée dans un creux.</p>
-      <p class="fragment fade-up" data-fragment-index="1">Une population de solutions explore tout le terrain.</p>
-      <div class="fragment fade-up stack" data-fragment-index="2" style="margin-top:30px">
-        <p style="margin:0">4 fonctions : Sphere, Rastrigin, Rosenbrock, Griewank</p>
-        <p style="margin:0">D = 10, 50, 100 et Pop = 50, 100, 500</p>
-        <p style="margin:0">Budget : 10<sup>4</sup> × D évaluations</p>
-        <p class="small" style="margin:0">On choisit la fonction, D et Pop, le programme rend le minimum trouvé et le temps.</p>
-      </div>
+      <p class="fragment fade-up" data-fragment-index="0">Une recherche locale descend dans le puits le plus proche et y reste.</p>
+      <p class="fragment fade-up" data-fragment-index="1">Une population explore tout le terrain et finit dans le bon puits.</p>
     </div>
-    <div style="position:relative">
-      <canvas id="rastrigin" width="440" height="440" style="width:440px;height:440px;border-radius:6px"></canvas>
-      <svg id="rastrigin-pts" width="440" height="440" style="position:absolute;left:0;top:0"></svg>
-      <p class="small" style="margin-top:8px">Rastrigin en 2D : plus c'est foncé, plus c'est bas.</p>
+    <div class="fragment fade-up" data-fragment-index="2">
+      <p style="margin:0 0 6px">4 fonctions : Sphere, Rastrigin, Rosenbrock, Griewank</p>
+      <p style="margin:0 0 6px">D = 10, 50, 100 et Pop = 50, 100, 500</p>
+      <p style="margin:0">Budget : 10<sup>4</sup> × D évaluations</p>
     </div>
   </div>
   <span class="fragment step" data-fragment-index="0"></span><span class="fragment step" data-fragment-index="1"></span>
   <div class="who">Mohamed</div>
   <aside class="notes">
 <p>Mohamed. Durée : 40 s.</p>
-<p>On cherche le minimum global d'une fonction. Ici c'est Rastrigin en 2 dimensions : plein de petits creux.</p>
-<p><b>[clic]</b> Si on fait une descente classique, on tombe dans le creux le plus proche et on reste bloqué.</p>
-<p><b>[clic]</b> Avec une population, on a plein de points qui explorent et qui se rapprochent petit à petit du vrai minimum, au centre.</p>
-<p><b>[clic]</b> Le sujet impose 4 fonctions, 3 dimensions, 3 tailles de population, et un budget de 10 puissance 4 fois D évaluations. L'utilisateur choisit la fonction, D et Pop, et le programme rend le minimum et le temps.</p>
+<p>On cherche le minimum global d'une fonction. Ici c'est Rastrigin en une dimension : plein de puits, et un seul vrai minimum, au milieu.</p>
+<p><b>[clic]</b> Une recherche locale, comme une bille qu'on lâche, descend dans le puits le plus proche et reste bloquée : c'est un minimum local.</p>
+<p><b>[clic]</b> Avec une population, on a plein de points répartis partout. À chaque génération ils se déplacent, et petit à petit ils se regroupent dans le bon puits.</p>
+<p><b>[clic]</b> Le sujet impose 4 fonctions, 3 dimensions, 3 tailles de population et un budget de 10 puissance 4 fois D évaluations. L'utilisateur choisit la fonction, D et Pop, et le programme rend le minimum trouvé et le temps.</p>
   </aside>
 </section>
 
@@ -95,44 +90,49 @@
 </section>
 
 <!-- ============================================================ 4 -->
-<section data-anim="pso">
-  <h2>Le PSO fourni</h2>
-  <svg id="pso-svg" width="1136" height="400" viewBox="0 0 1136 400"></svg>
+<section data-anim="psoalgo">
+  <div class="cols" style="grid-template-columns:minmax(0,1fr) 560px;gap:32px">
+    <div>
+      <h2 style="font-size:48px">Le PSO : un essaim de particules</h2>
+      <div style="font-size:26px">
+        <p id="pa-t0">Chaque particule a une position <b>x</b> et une vitesse <b>v</b>.</p>
+        <p id="pa-t1" style="opacity:0"><b>pBest</b> : la meilleure position que cette particule a déjà vue.</p>
+        <p id="pa-t2" style="opacity:0"><b>gBest</b> : la meilleure position de tout l'essaim.</p>
+        <p id="pa-t3" style="opacity:0">Nouvelle vitesse = un peu de l'ancienne + attirance vers pBest + attirance vers gBest.</p>
+        <p id="pa-t4" style="opacity:0">La particule avance. Si c'est mieux, son pBest est mis à jour.</p>
+      </div>
+      <p class="small">Dans le code fourni : w = 0,5 et c<sub>1</sub> = c<sub>2</sub> = 1,5</p>
+    </div>
+    <svg id="pa-svg" width="560" height="467" viewBox="0 0 600 500"></svg>
+  </div>
   <span class="fragment step"></span><span class="fragment step"></span><span class="fragment step"></span><span class="fragment step"></span>
   <div class="who">Zainab</div>
   <aside class="notes">
 <p>Zainab. Durée : 1 min.</p>
-<p>Avant d'écrire le DE, on a lu le PSO que vous nous avez donné. Les positions sont tirées sur le CPU puis copiées sur le GPU.</p>
-<p><b>[clic]</b> À chaque itération, kernelUpdateParticle met à jour vitesse et position avec un thread par coordonnée. Puis kernelUpdatePBest compare chaque particule à son meilleur personnel, avec un thread par particule (seuls les threads avec i % D == 0 travaillent).</p>
-<p><b>[clic]</b> Ensuite tous les meilleurs personnels sont copiés vers le CPU...</p>
-<p><b>[clic]</b> ... le CPU cherche le meilleur global avec une boucle et le renvoie au GPU.</p>
-<p><b>[clic]</b> Et ça recommence à chaque itération : deux copies et une boucle CPU à chaque fois, c'est ce qui le rend lent. Pour D = 100, il met entre 9 et 18 secondes, contre 0,04 à 0,2 s pour notre meilleure version.</p>
-<p><b>Questions possibles</b> : pourquoi le PSO est lent ? Les copies CPU/GPU et la boucle CPU à chaque itération. Combien d'itérations on lui donne ? 10^4 × D / Pop, pour avoir le même nombre d'évaluations que le DE.</p>
+<p>Avant le DE, on a étudié le PSO que vous nous avez donné. Les cercles sont les courbes de niveau, le minimum est au centre. Chaque particule a une position x et une vitesse v, la petite flèche.</p>
+<p><b>[clic]</b> Chaque particule se souvient de la meilleure position qu'elle a vue depuis le début : son pBest. Ici elle est passée par là, et c'était mieux qu'aujourd'hui.</p>
+<p><b>[clic]</b> Le gBest, c'est la meilleure position trouvée par tout l'essaim. Elle est partagée par toutes les particules.</p>
+<p><b>[clic]</b> À chaque itération, la nouvelle vitesse est la somme de trois flèches : la moitié de l'ancienne vitesse (w = 0,5), une flèche vers son pBest et une flèche vers le gBest, chacune multipliée par 1,5 et un nombre aléatoire.</p>
+<p><b>[clic]</b> La particule avance avec cette vitesse. Elle est meilleure que son ancien pBest, donc son pBest est mis à jour. Ici elle ne bat pas le gBest, donc lui ne change pas. Et on fait ça pour toutes les particules à chaque itération.</p>
+<p><b>Questions possibles</b> : différence avec le DE ? Le PSO a une vitesse et suit un meilleur global, le DE n'a ni l'un ni l'autre : il fabrique des essais avec des différences entre individus et garde le meilleur des deux.</p>
   </aside>
 </section>
 
 <!-- ============================================================ 5 -->
-<section>
-  <h2>Ce qu'on a trouvé dans le code fourni</h2>
-  <table class="errs">
-    <tr class="fragment fade-up"><td>Griewank : le produit commence à 0, donc la fonction était fausse</td>
-      <td><span class="etat"><svg viewBox="0 0 22 22"><circle cx="11" cy="11" r="10" fill="var(--ink)"/><path d="M6 11.5l3.2 3.2L16 8" stroke="var(--paper)" stroke-width="2.4" fill="none"/></svg>Corrigé</span></td></tr>
-    <tr class="fragment fade-up"><td>Dim, Pop et la fonction écrits en dur ; <code>MAX_ITER</code> compte des itérations, pas des évaluations</td>
-      <td><span class="etat"><svg viewBox="0 0 22 22"><circle cx="11" cy="11" r="10" fill="none" stroke="var(--ink)" stroke-width="2"/><path d="M6 11h10M12 7l4 4-4 4" stroke="var(--ink)" stroke-width="2" fill="none"/></svg>Adapté</span><span class="small">pour faire tous les tests à budget égal</span></td></tr>
-    <tr class="fragment fade-up"><td>PSO : nombre de blocs arrondi vers le bas, tableaux <code>tempParticle</code> partagés par tous les threads</td>
-      <td><span class="etat"><svg viewBox="0 0 22 22"><circle cx="11" cy="11" r="10" fill="none" stroke="var(--muted)" stroke-width="2"/><path d="M7 11h8" stroke="var(--muted)" stroke-width="2.4"/></svg>Laissé</span><span class="small">le PSO reste la référence fournie</span></td></tr>
-    <tr class="fragment fade-up"><td><code>getRandom</code> : positions de départ jusqu'à 6,12 au lieu de 5,12</td>
-      <td><span class="etat"><svg viewBox="0 0 22 22"><circle cx="11" cy="11" r="10" fill="none" stroke="var(--muted)" stroke-width="2"/><path d="M7 11h8" stroke="var(--muted)" stroke-width="2.4"/></svg>Laissé</span><span class="small">même départ pour toutes les versions</span></td></tr>
-  </table>
+<section data-anim="pso">
+  <h2 style="max-width:none">Le PSO fourni, côté CUDA</h2>
+  <svg id="pso-svg" width="1136" height="400" viewBox="0 0 1136 400"></svg>
+  <p id="pso-cap" style="margin-top:14px;font-size:28px;min-height:76px"></p>
+  <span class="fragment step"></span><span class="fragment step"></span><span class="fragment step"></span><span class="fragment step"></span>
   <div class="who">Zainab</div>
   <aside class="notes">
-<p>Zainab. Durée : 40 s.</p>
-<p>En lisant le code, on a trouvé quelques erreurs.</p>
-<p><b>[clic]</b> La plus grave : dans Griewank, le produit des cosinus commençait à 0 au lieu de 1. Il restait donc toujours à 0 et on ne testait pas vraiment Griewank. On l'a corrigé partout, aussi dans le PSO.</p>
-<p><b>[clic]</b> Dim, Pop et la fonction étaient des constantes : on les a rendues réglables à la compilation. Et MAX_ITER compte des itérations, donc on a calculé le nombre d'itérations pour que le PSO ait le même budget d'évaluations que le DE.</p>
-<p><b>[clic]</b> Dans le PSO, le nombre de blocs est arrondi vers le bas, donc les dernières coordonnées ne sont jamais mises à jour, et les tableaux tempParticle sont partagés par tous les threads. On ne l'a pas corrigé : on voulait garder le PSO tel que fourni comme référence. Ça le désavantage, et on le dit dans le rapport.</p>
-<p><b>[clic]</b> getRandom tire jusqu'à 6,12 à cause d'un +1. Comme toutes nos versions partent des mêmes populations, ça ne change pas la comparaison.</p>
-<p><b>Questions possibles</b> : pourquoi ne pas corriger le PSO ? Le sujet demande de l'étudier et de le transformer en DE ; si on le répare ce n'est plus le PSO fourni. Pourquoi corriger Griewank et pas le reste ? Parce que ce bug changeait la fonction testée elle-même. Levy (fonction 0) a aussi une erreur, mais elle n'est pas dans les tests.</p>
+<p>Zainab. Durée : 50 s.</p>
+<p>Dans le code fourni, les positions, vitesses et pBest vivent sur le GPU. Le gBest, lui, est calculé sur le CPU.</p>
+<p><b>[clic]</b> À chaque itération, kernelUpdateParticle calcule la nouvelle vitesse et la position avec un thread par coordonnée : toutes les cases en même temps.</p>
+<p><b>[clic]</b> Puis kernelUpdatePBest : un thread par particule compare sa position à son pBest.</p>
+<p><b>[clic]</b> Ensuite tous les pBest sont copiés vers le CPU, qui cherche le meilleur avec une simple boucle : c'est le gBest.</p>
+<p><b>[clic]</b> Le gBest est renvoyé au GPU, et ça recommence. Deux copies et une boucle CPU à chaque itération : c'est ce qui rend le PSO lent. Pour D = 100 il met 9 à 18 s, contre 0,04 à 0,2 s pour notre meilleure version.</p>
+<p><b>Questions possibles</b> : vous avez modifié le code fourni ? Seulement deux choses : Dim, Pop et la fonction sont réglables à la compilation, et Griewank est corrigé (le produit commençait à 0 au lieu de 1, donc la fonction était fausse). Pourquoi pas plus ? Le PSO sert de référence, on l'a gardé tel quel. On a aussi vu que le nombre de blocs est arrondi vers le bas et que tempParticle est partagé entre threads ; c'est dans le rapport. Combien d'itérations ? 10^4 × D / Pop, pour avoir le même nombre d'évaluations que le DE.</p>
   </aside>
 </section>
 
@@ -220,10 +220,10 @@
 <section data-anim="v2perf">
   <div class="cols wide-right">
     <div>
-      <h2>Pourquoi la v2 est plus lente</h2>
+      <h2 style="font-size:46px">Pourquoi la v2 est plus lente</h2>
       <p><span class="big">1,4×</span><span class="small"> plus lente que la v1 (médiane)</span></p>
-      <p class="fragment fade-up">D = 10 : chaque kernel prend 3 à 5 µs, c'est surtout le coût du lancement. Et il y en a 5 par génération au lieu d'un.</p>
-      <p class="fragment fade-up">D = 100 : M, C et E bouclent sur 100 coordonnées et relisent les tableaux écrits par le kernel d'avant.</p>
+      <p class="fragment fade-up" style="font-size:26px">D = 10 : 3 à 5 µs par kernel, surtout le coût du lancement. Et 5 lancements par génération au lieu d'un.</p>
+      <p class="fragment fade-up" style="font-size:26px">D = 100 : M, C et E bouclent sur 100 coordonnées en mémoire globale.</p>
     </div>
     <div>
       <p class="small" style="margin-bottom:6px">Temps d'un lancement de chaque kernel de la v2 (µs), Rastrigin</p>
@@ -268,26 +268,48 @@
 
 <!-- ============================================================ 11 -->
 <section data-anim="v3red">
-  <h2>Ce qu'il a fallu changer</h2>
-  <svg id="red-svg" width="1136" height="240" viewBox="0 0 1136 240"></svg>
-  <div>
-    <ul class="plain" style="display:grid;grid-template-columns:1fr 1fr;column-gap:48px;margin-top:6px;font-size:26px">
-      <li class="fragment fade-up" data-fragment-index="0">r<sub>1</sub>, r<sub>2</sub>, r<sub>3</sub> et jrand tirés une seule fois par individu (kernel P), puis relus par tous ses threads</li>
-      <li class="fragment fade-up" data-fragment-index="1">Un état aléatoire par coordonnée pour le croisement</li>
-      <li class="fragment fade-up" data-fragment-index="2">Évaluation : chaque thread calcule son terme, puis on additionne en mémoire partagée</li>
-      <li class="fragment fade-up" data-fragment-index="3">Sélection : la fitness est lue dans un tableau et écrite dans un autre</li>
-    </ul>
+  <h2 style="max-width:none;margin-bottom:18px">v3 : les 5 kernels, thread par thread</h2>
+  <svg id="pipe-svg" width="1136" height="112" viewBox="0 0 1136 112"></svg>
+  <div class="panels" style="margin-top:22px;height:400px">
+    <div class="panel">
+      <p class="lead">Mêmes étapes que la v2. Mais M, C, E et S lancent <b>Pop × D</b> threads : un par coordonnée.</p>
+      <p class="small">Chaque thread connaît son individu <code>i = k / D</code> et sa coordonnée <code>d = k % D</code>.</p>
+    </div>
+    <div class="panel">
+      <p class="lead"><b>P</b> garde un thread par individu : il tire r<sub>1</sub>, r<sub>2</sub>, r<sub>3</sub> et jrand une seule fois.</p>
+      <p>Les D threads de l'individu relisent ces indices. Sinon chaque coordonnée prendrait des voisins différents.</p>
+      <svg id="vp-svg" width="1136" height="210" viewBox="0 0 1136 210"></svg>
+    </div>
+    <div class="panel">
+      <p class="lead"><b>M</b> puis <b>C</b> : chaque thread calcule sa coordonnée d, sans parler aux autres.</p>
+      <div style="display:flex;gap:40px;align-items:flex-start">
+        <div style="flex:1">
+          <p class="formule">M : v<sub>d</sub> = x<sub>r1,d</sub> + F (x<sub>r2,d</sub> − x<sub>r3,d</sub>)</p>
+          <p class="formule">C : u<sub>d</sub> = v<sub>d</sub> ou x<sub>i,d</sub></p>
+          <p class="small">Un état aléatoire par coordonnée pour le tirage du croisement.</p>
+        </div>
+        <svg id="vm-svg" width="470" height="240" viewBox="0 0 470 240"></svg>
+      </div>
+    </div>
+    <div class="panel">
+      <p class="lead" style="margin-bottom:6px"><b>E</b> : f(u) est une somme sur les coordonnées. Chaque thread calcule le terme de sa coordonnée, puis on additionne en mémoire partagée.</p>
+      <svg id="red-svg" width="1136" height="250" viewBox="0 0 1136 250"></svg>
+    </div>
+    <div class="panel">
+      <p class="lead"><b>S</b> : si f(u) ≤ f(x<sub>i</sub>), chaque thread copie sa coordonnée de u.</p>
+      <p>Le thread d = 0 écrit la nouvelle fitness. Il lit dans <code>fitIn</code> et écrit dans <code>fitOut</code> : sinon un autre thread du même individu pourrait lire la nouvelle valeur trop tôt.</p>
+    </div>
   </div>
-  <span class="fragment step" data-fragment-index="0"></span><span class="fragment step" data-fragment-index="1"></span><span class="fragment step" data-fragment-index="2"></span><span class="fragment step" data-fragment-index="3"></span>
+  <span class="fragment step"></span><span class="fragment step"></span><span class="fragment step"></span><span class="fragment step"></span>
   <div class="who">Zainab</div>
   <aside class="notes">
-<p>Zainab. Durée : 1 min 15.</p>
-<p>Passer à un thread par coordonnée nous a obligés à changer quatre choses.</p>
-<p><b>[clic]</b> Un : r1, r2, r3 et jrand doivent être les mêmes pour toutes les coordonnées d'un individu. Donc le kernel P garde un thread par individu, et les autres kernels relisent ces indices.</p>
-<p><b>[clic]</b> Deux : chaque coordonnée tire son propre nombre pour le croisement, donc il faut un état cuRAND par coordonnée, Pop × D états.</p>
-<p><b>[clic]</b> Trois, le plus dur : l'évaluation. f est une somme sur les coordonnées. Chaque thread calcule son terme et l'écrit en mémoire partagée. <i>(animation)</i> Puis à chaque tour, la première moitié des threads ajoute la case de la deuxième moitié : 16, 8, 4, 2, 1. À la fin il reste la somme, on ajoute la constante et on a f. Il faut une puissance de 2, donc les threads en trop ajoutent 0. Pour Griewank on fait aussi le produit en même temps.</p>
-<p><b>[clic]</b> Quatre : à la sélection, le thread de la coordonnée 0 met à jour la fitness. S'il l'écrivait dans le même tableau, les autres threads du même individu pourraient lire la nouvelle valeur. Donc on lit dans un tableau et on écrit dans l'autre.</p>
-<p><b>Questions possibles</b> : pourquoi __syncthreads ? Pour que tous les threads aient fini un tour de la somme avant le suivant. Rosenbrock ? Le terme d a besoin de la coordonnée d+1, le thread la lit en mémoire globale.</p>
+<p>Zainab. Durée : 1 min 10.</p>
+<p>On reprend les 5 kernels de la v2, mais M, C, E et S lancent un thread par coordonnée. Il a fallu changer quatre choses.</p>
+<p><b>[clic]</b> P : r1, r2, r3 et jrand doivent être les mêmes pour toutes les coordonnées d'un individu. Donc P garde un thread par individu, et les autres kernels relisent ces indices.</p>
+<p><b>[clic]</b> M puis C : la mutation et le croisement se font coordonnée par coordonnée, donc chaque thread fait sa case sans rien demander aux autres. Seul changement : chaque coordonnée tire son propre nombre pour le croisement, il faut donc un état cuRAND par coordonnée.</p>
+<p><b>[clic]</b> E, le plus dur. f(u) est une somme sur toutes les coordonnées. Chaque case, c'est le terme d'une coordonnée, calculé par son thread. Mais personne ne connaît la somme. <i>(animation)</i> Donc à chaque tour, la première moitié des threads ajoute la case de la deuxième moitié : 16, 8, 4, 2, 1. Il reste la somme, on enlève 330 et on a f. Il faut une puissance de 2, donc les threads en trop mettent 0.</p>
+<p><b>[clic]</b> S : chaque thread copie sa coordonnée si l'essai gagne. Le thread de la coordonnée 0 écrit la fitness dans un autre tableau, sinon les autres threads de l'individu pourraient lire la nouvelle valeur.</p>
+<p><b>Questions possibles</b> : pourquoi __syncthreads ? Pour que tous les threads aient fini un tour avant le suivant. Rosenbrock ? Le terme d a besoin de la coordonnée d+1, le thread la lit en mémoire globale. Griewank ? On fait la somme et le produit en même temps.</p>
   </aside>
 </section>
 
@@ -305,7 +327,8 @@
       <p class="small">RTX 2080 Ti, i7-8700K, CUDA 13.4</p>
     </div>
     <div>
-      <svg id="proto-svg" width="560" height="360" viewBox="0 0 560 360"></svg>
+      <svg id="proto-svg" width="600" height="330" viewBox="0 0 600 330"></svg>
+      <p class="small" style="margin:4px 0 10px">Une case = un cas (fonction, D, Pop). Un point = un run.</p>
       <p class="fragment fade-up"><span class="big">1800</span><small class="small"> runs (5 programmes) + 720 avec CR = 0,3</small></p>
     </div>
   </div>
@@ -313,6 +336,7 @@
   <aside class="notes">
 <p>Omar. Durée : 40 s.</p>
 <p>Pour les tests : 4 fonctions, 3 dimensions et 3 tailles de population, ça fait 36 cas.</p>
+<p>Sur le schéma, chaque case est un cas : une fonction, une dimension et une population. Chaque point dans une case est un run.</p>
 <p><b>[clic]</b> 10 runs par cas, avec la même graine, donc les cinq programmes partent exactement des mêmes populations de départ.</p>
 <p><b>[clic]</b> On mesure le temps réel de l'appel, avec les allocations et les copies. Le premier run, qui initialise CUDA, n'est pas compté.</p>
 <p><b>[clic]</b> Pour savoir si deux programmes donnent des résultats vraiment différents, on utilise Wilcoxon et Kruskal-Wallis avec un seuil de 5 %.</p>
@@ -325,8 +349,8 @@
 <section data-anim="qualite">
   <div class="cols wide-right">
     <div>
-      <h2>Même qualité pour les 4 versions du DE</h2>
-      <ul class="plain">
+      <h2 style="font-size:46px">Même qualité pour les 4 versions du DE</h2>
+      <ul class="plain" style="font-size:26px">
         <li>Différence significative CPU / v1 : 2 cas sur 36, CPU / v3 : 0 sur 36</li>
         <li class="fragment fade-up">Avec 5 %, on attend environ 2 cas sur 36 par hasard</li>
         <li class="fragment fade-up">Le DE bat le PSO dans 34 cas sur 36</li>
@@ -368,9 +392,9 @@
   <span class="fragment step"></span><span class="fragment step"></span>
   <div class="who">Zainab</div>
   <aside class="notes">
-<p>Zainab. Durée : 1 min 05.</p>
+<p>Zainab. Durée : 55 s.</p>
 <p>Le temps moyen d'un run selon la population, ici pour D = 100, en échelle log. Le CPU, en jaune, ne bouge pas avec la population : il fait toujours le même nombre d'évaluations. Sur GPU, plus la population est grande, moins il y a de générations, donc moins de lancements de kernel, et plus de threads travaillent en même temps.</p>
-<p>La v3, en vert, est en dessous de tout le monde : jusqu'à 89 fois plus rapide que le CPU, et 2,4 à 6,8 fois plus rapide que la v1 pour D = 50 et 100. Le PSO, en violet, est le plus lent partout.</p>
+<p>La v3, en vert, est en dessous de tout le monde : jusqu'à 89 fois plus rapide que le CPU, et 2,4 à 6,8 fois plus rapide que la v1 pour D = 50 et 100. Le PSO, en violet, est le plus lent.</p>
 <p><b>[clic]</b> Pour D = 50, c'est pareil.</p>
 <p><b>[clic]</b> Mais pour D = 10, la v3 est environ 1,5 fois plus lente que la v1 : chaque kernel a très peu de travail, donc on paie surtout les 5 lancements par génération, contre 1 pour la v1. C'est pour ça que l'article regroupe les kernels en un seul tout en gardant un thread par coordonnée.</p>
 <p><b>Questions possibles</b> : pourquoi la v3 est plus rapide ? Beaucoup plus de threads et des lectures groupées. Pourquoi le CPU ne change pas avec Pop ? Même nombre total d'évaluations.</p>
@@ -414,7 +438,7 @@
     <ul class="plain">
       <li class="fragment fade-up" data-fragment-index="0">f est calculée en <code>float</code> avec la constante (−450…) dedans : l'erreur bloque vers 10<sup>−5</sup></li>
       <li class="fragment fade-up" data-fragment-index="1">Pas de <code>double</code> : environ 32× plus lent sur notre carte. Mieux : calculer f sans la constante</li>
-      <li class="fragment fade-up" data-fragment-index="2">PSO gardé avec ses défauts, une seule autre valeur de CR testée</li>
+      <li class="fragment fade-up" data-fragment-index="2">PSO fourni gardé tel quel (seul Griewank corrigé), une seule autre valeur de CR testée</li>
     </ul>
   </div>
   <span class="fragment step" data-fragment-index="0"></span>
@@ -424,7 +448,7 @@
 <p>Notre première limite, c'est la précision. La fonction renvoie par exemple somme moins 450 en float. Un float garde environ 7 chiffres, donc près de 450 deux valeurs voisines sont séparées de 3 × 10^-5.</p>
 <p><b>[clic]</b> Si l'essai a une somme de 0,00001 et la cible 0,00002, les deux donnent -450 tout pile : la sélection ne voit plus la différence. C'est pour ça que l'erreur bloque vers 10^-5 et qu'on n'atteint jamais 10^-8 comme l'article.</p>
 <p><b>[clic]</b> On n'est pas passés en double : sur une carte grand public comme la 2080 Ti, le double est environ 32 fois plus lent, ça aurait cassé les mesures de temps. La vraie solution serait de calculer f sans la constante et de l'ajouter seulement à l'affichage.</p>
-<p><b>[clic]</b> Et le PSO a été gardé avec ses défauts, et on n'a testé qu'une autre valeur de CR.</p>
+<p><b>[clic]</b> Et on a gardé le PSO fourni tel quel, à part la correction de Griewank, et on n'a testé qu'une autre valeur de CR.</p>
   </aside>
 </section>
 
@@ -452,7 +476,7 @@
 
 <!-- ============================================================ 18 -->
 <section data-anim="fin">
-  <svg id="fin-grid" width="560" height="420" style="position:absolute;right:56px;top:150px" aria-hidden="true"></svg>
+  <canvas id="fin-land" class="land" width="1240" height="920" style="position:absolute;right:20px;top:120px;width:620px;height:460px" aria-hidden="true"></canvas>
   <div style="margin-top:190px">
     <h1>Merci</h1>
     <p class="lead" style="margin-top:22px">Questions ?</p>
