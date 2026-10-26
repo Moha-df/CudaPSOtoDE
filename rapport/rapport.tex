@@ -5,6 +5,7 @@
 \usepackage{amsmath,amssymb}
 \usepackage{graphicx}
 \usepackage{booktabs}
+\usepackage{array}
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,positioning,shapes.geometric,shapes.multipart,fit,calc}
 \usepackage[hidelinks]{hyperref}
@@ -84,7 +85,30 @@ Avant d'\'ecrire le DE, nous avons lu le PSO CUDA du professeur. \texttt{main.cp
 \item \texttt{kernelUpdatePBest} : seuls les threads avec \texttt{i \% D == 0} travaillent, donc un par particule. Chacun compare sa position \`a son meilleur personnel et le remplace s'il est meilleur ;
 \item ensuite tous les meilleurs personnels sont recopi\'es sur le CPU, qui cherche le meilleur global avec une boucle, puis le renvoie au GPU.
 \end{itemize}
-Il y a donc deux copies CPU$\leftrightarrow$GPU et une boucle CPU \`a chaque it\'eration, ce qui ralentit beaucoup le programme. En lisant le code, nous avons aussi relev\'e quelques probl\`emes. Dans Griewank, le produit commen\c cait \`a 0 au lieu de 1 et restait donc toujours nul ; nous l'avons corrig\'e partout. Le nombre de blocs \texttt{ceil(size / threadsNum)} est calcul\'e avec une division enti\`ere : quand $N_P\times D$ n'est pas un multiple de 32, les derni\`eres coordonn\'ees ne sont jamais mises \`a jour. Les tableaux \texttt{tempParticle1} et \texttt{tempParticle2} sont globaux et partag\'es par tous les threads, alors que chaque thread y \'ecrit sa particule. Enfin, \texttt{MAX\_ITER} compte des it\'erations et non des \'evaluations. Pour respecter le budget, nous donnons au PSO $10^4\times D/N_P$ it\'erations. \`A part la correction de Griewank, nous avons gard\'e le PSO tel quel pour qu'il serve de r\'ef\'erence.
+Il y a donc deux copies CPU$\leftrightarrow$GPU et une boucle CPU \`a chaque it\'eration, ce qui ralentit beaucoup le programme.
+
+\subsubsection{Erreurs trouv\'ees dans le code fourni}
+En lisant le code, nous avons trouv\'e plusieurs erreurs. Le tableau~\ref{tab:erreurs} les r\'esume. Nous avons corrig\'e celles qui faussaient nos r\'esultats, et laiss\'e les autres pour garder le code fourni le plus proche possible de l'original.
+
+La plus grave est dans Griewank : le produit des cosinus commen\c cait \`a 0 au lieu de 1. Il restait donc toujours nul, et la fonction calcul\'ee n'\'etait pas Griewank mais presque une Sphere. Nous l'avons corrig\'ee dans la version CPU et dans la version GPU de la fonction, y compris dans le PSO.
+
+Deux autres points ne sont pas vraiment des erreurs, mais nous avons d\^u les adapter au sujet. Dim, Pop et la fonction \'etaient des constantes \'ecrites dans \texttt{kernel.h} ; nous les avons rendues r\'eglables \`a la compilation, avec les m\^emes valeurs par d\'efaut. Et \texttt{MAX\_ITER} compte des it\'erations, alors que le sujet impose un nombre d'\'evaluations : nous donnons donc au PSO $10^4\times D/N_P$ it\'erations, ce qui fait le m\^eme nombre d'\'evaluations que le DE.
+
+Nous avons laiss\'e les autres erreurs. \texttt{getRandom} tire les positions de d\'epart entre $-5{,}12$ et $6{,}12$ au lieu de $5{,}12$, \`a cause d'un \texttt{+1} en trop. Comme toutes nos versions utilisent cette fonction avec la m\^eme graine, elles partent des m\^emes populations, et le DE ram\`ene chaque essai dans le domaine d\`es la premi\`ere g\'en\'eration. Dans Levy, un terme est ajout\'e \`a chaque tour de boucle au lieu d'une seule fois, mais cette fonction ne fait pas partie des tests demand\'es. Dans le PSO, le nombre de blocs \texttt{ceil(size / threadsNum)} est calcul\'e avec une division enti\`ere : quand $N_P\times D$ n'est pas un multiple de 32, ce qui arrive dans tous nos tests, les derni\`eres coordonn\'ees ne sont jamais mises \`a jour. De plus, les tableaux \texttt{tempParticle1} et \texttt{tempParticle2} sont globaux : tous les threads y \'ecrivent leur particule en m\^eme temps, donc un thread peut \'evaluer la particule d'un autre. Nous n'avons pas corrig\'e le PSO, car il sert de r\'ef\'erence ``telle que fournie''. Il faut donc garder en t\^ete que nos r\'esultats le d\'esavantagent. Enfin, la fonction est calcul\'ee en \texttt{float} avec la constante ($-450$, etc.) ajout\'ee \`a l'int\'erieur, ce qui limite la pr\'ecision (voir section~IV-B).
+
+\begin{table}[!t]\centering\footnotesize\setlength{\tabcolsep}{3pt}
+\caption{Erreurs trouv\'ees dans le code fourni.}\label{tab:erreurs}
+\begin{tabular}{>{\raggedright\arraybackslash}p{3.3cm}c>{\raggedright\arraybackslash}p{3.9cm}}\toprule
+Probl\`eme & Corrig\'e & Raison\\\midrule
+Griewank : produit qui commence \`a 0 & oui & la fonction test\'ee \'etait fausse\\
+Dim, Pop, fonction en constantes & oui & n\'ecessaire pour faire tous les tests\\
+\texttt{MAX\_ITER} en it\'erations & oui & m\^eme budget d'\'evaluations pour tous\\
+\texttt{getRandom} : d\'epart jusqu'\`a 6,12 & non & m\^eme d\'epart pour toutes les versions\\
+Levy : terme dans la boucle & non & fonction non test\'ee\\
+PSO : nombre de blocs arrondi & non & PSO gard\'e comme r\'ef\'erence\\
+PSO : \texttt{tempParticle} partag\'es & non & PSO gard\'e comme r\'ef\'erence\\
+\texttt{float} + constante dans $f$ & non & fonctions du sujet gard\'ees (section~IV-B)\\
+\bottomrule\end{tabular}\end{table}
 
 \subsubsection{v1 : un seul kernel}
 Pour le DE, nous avons gard\'e la m\^eme fonction \texttt{cuda\_pso} pour ne pas toucher \`a \texttt{main.cpp}. Toute la population reste sur le GPU du d\'ebut \`a la fin : une copie au d\'ebut, une copie \`a la fin. Le kernel \texttt{kernelDEGeneration} est lanc\'e une fois par g\'en\'eration avec un thread par individu. Chaque thread tire $r_1$, $r_2$, $r_3$, construit son essai, l'\'evalue et fait la s\'election. Comme dans la version CPU, on lit dans \texttt{popIn} et on \'ecrit dans \texttt{popOut}, puis le CPU \'echange les deux pointeurs. Sans cela, un thread pourrait remplacer un individu pendant qu'un autre thread le lit pour sa mutation.
@@ -135,7 +159,7 @@ f_{\mathrm{Griewank}}&=\sum_{i=1}^{D}\frac{z_i^2}{4000}-\prod_{i=1}^{D}\cos\frac
 \end{align*}
 Le minimum est en $x=0$ et vaut $-450$, $-330$, $390$ et $-180$. Sphere est la plus facile : une seule ``cuvette''. Rastrigin et Griewank ont \'enorm\'ement de minimums locaux. Rosenbrock a un seul minimum, mais au fond d'une vall\'ee longue et plate o\`u l'algorithme avance lentement.
 
-Les calculs sont en \texttt{float}. Comme on ajoute $-450$ (ou une autre constante) au r\'esultat, deux fitness ne peuvent plus \^etre distingu\'ees si elles diff\`erent de moins de $3\times10^{-5}$ environ. C'est pourquoi l'erreur ne descend presque jamais sous $10^{-5}$ dans nos tableaux.
+Les calculs sont en \texttt{float}. Comme on ajoute $-450$ (ou une autre constante) au r\'esultat, deux fitness ne peuvent plus \^etre distingu\'ees si elles diff\`erent de moins de $3\times10^{-5}$ environ. C'est pourquoi l'erreur ne descend presque jamais sous $10^{-5}$ dans nos tableaux. Nous n'avons pas pass\'e les calculs en \texttt{double} pour deux raisons : nous voulions garder les fonctions du code fourni, et sur notre carte grand public les calculs en \texttt{double} sont environ 32 fois plus lents qu'en \texttt{float}, ce qui aurait fauss\'e les mesures de temps. La vraie solution serait de calculer $f$ sans la constante et de ne l'ajouter qu'\`a l'affichage : on pourrait alors rester en \texttt{float}.
 
 \subsection{R\'esultats}
 
@@ -194,7 +218,7 @@ Nous avons \'etudi\'e le PSO CUDA fourni, puis nous l'avons transform\'e en DE/r
 
 Pour la vitesse, s\'eparer les \'etapes en plusieurs kernels (v2) rend le code plus clair mais plus lent, \`a cause des lancements de kernel en plus et des tableaux qui passent par la m\'emoire globale. Mettre un thread par coordonn\'ee (v3) est le changement qui compte le plus : la v3 va jusqu'\`a 89 fois plus vite que le CPU et jusqu'\`a 6,8 fois plus vite que la v1 quand $D\ge50$. Pour $D=10$, elle reste plus lente que la v1, car il y a trop peu de travail par kernel. Enfin, $CR=0{,}3$ am\'eliore les grandes populations et Rastrigin en $D=10$, mais d\'egrade Rosenbrock.
 
-Notre travail a des limites. Les calculs en \texttt{float} emp\^echent d'atteindre une erreur de $10^{-8}$, donc nous ne pouvons pas comparer nos taux de succ\`es \`a ceux de l'article avec le m\^eme seuil. Le PSO a \'et\'e gard\'e avec ses d\'efauts. Nous n'avons test\'e qu'une seule autre valeur de $CR$. Pour aller plus loin, on pourrait regrouper (M), (C), (E) et (S) en un seul kernel tout en gardant un thread par coordonn\'ee, comme cudaDEi, ce qui devrait r\'egler le probl\`eme de la v3 pour $D=10$. On pourrait aussi calculer en double pr\'ecision et essayer d'autres strat\'egies, comme DE/best/1 ou un $CR$ qui s'adapte pendant le run.
+Notre travail a des limites. Comme la fonction est calcul\'ee en \texttt{float} avec la constante ($-450$, etc.) ajout\'ee \`a l'int\'erieur, nous ne pouvons pas atteindre une erreur de $10^{-8}$, ni donc comparer nos taux de succ\`es \`a ceux de l'article avec le m\^eme seuil. Le PSO a \'et\'e gard\'e avec ses d\'efauts. Nous n'avons test\'e qu'une seule autre valeur de $CR$. Pour aller plus loin, on pourrait regrouper (M), (C), (E) et (S) en un seul kernel tout en gardant un thread par coordonn\'ee, comme cudaDEi, ce qui devrait r\'egler le probl\`eme de la v3 pour $D=10$. On pourrait aussi calculer en double pr\'ecision et essayer d'autres strat\'egies, comme DE/best/1 ou un $CR$ qui s'adapte pendant le run.
 
 %--------------------------------------------------------------
 \begin{thebibliography}{3}
