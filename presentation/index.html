@@ -445,7 +445,9 @@
     <div class="eq-nom" style="grid-row:3">Mohamed</div>
     <div class="eq-bar" data-col="0" style="grid-column:2;grid-row:1/4;background:var(--pso);color:var(--paper)">Étude du code CUDA PSO</div>
     <div class="eq-bar" data-col="1" style="grid-column:3;grid-row:3;background:var(--cpu)">DE séquentiel</div>
-    <div class="eq-bar" data-col="2" style="grid-column:4;grid-row:2;background:var(--v1);color:var(--paper)">GPU v1</div>
+    <div class="eq-bar" data-col="2" style="grid-column:4;grid-row:1;background:var(--v1);color:var(--paper)">GPU v1<small>(évaluation, sélection)</small></div>
+    <div class="eq-bar" data-col="2" style="grid-column:4;grid-row:2;background:var(--v1);color:var(--paper)">GPU v1<small>(mutation, croisement)</small></div>
+    <div class="eq-bar" data-col="2" style="grid-column:4;grid-row:3;background:var(--v1);color:var(--paper)">GPU v1<small>(mémoire, lancement des kernels)</small></div>
     <div class="eq-bar" data-col="3" style="grid-column:5;grid-row:2;background:var(--v2)">GPU v2</div>
     <div class="eq-bar" data-col="4" style="grid-column:6;grid-row:1;background:var(--v3)">GPU v3</div>
     <div class="eq-bar" data-col="5" style="grid-column:7;grid-row:3;background:var(--ink);color:var(--paper)">Tests et graphiques</div>
@@ -453,8 +455,8 @@
   </div>
   <p class="small" style="margin-top:22px">De gauche à droite : l'ordre dans lequel le projet a avancé.</p>
   <aside class="notes">
-<p>Mohamed. Durée : 20 s.</p>
-<p>Pour le partage du travail : on a d'abord tous étudié le code CUDA du PSO. Ensuite j'ai fait le DE séquentiel, Omar a fait la version GPU v1 puis la v2, et Zainab la variante v3, avec un thread par coordonnée. J'ai fait les tests et les graphiques, et on a rédigé le rapport tous ensemble.</p>
+<p>Mohamed. Durée : 25 s.</p>
+<p>Pour le partage du travail : on a d'abord tous étudié le code CUDA du PSO. Ensuite j'ai fait le DE séquentiel. La v1, on l'a faite à trois : Omar la mutation et le croisement, Zainab l'évaluation et la sélection, et moi la mémoire et le lancement des kernels. Puis Omar a fait la v2, et Zainab la variante v3, avec un thread par coordonnée. J'ai fait les tests et les graphiques, et on a rédigé le rapport tous ensemble.</p>
   </aside>
 </section>
 
